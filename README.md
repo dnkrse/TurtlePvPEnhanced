@@ -42,14 +42,3 @@ A PvP utility addon for **Turtle WoW** (Patch 1.18.1+).
 
 **Manual**
 Place the `TurtlePvPEnhanced` folder in `Interface/AddOns/`.
-
-## Commands
-
-| Command | Action |
-|---|---|
-| `/tpvp` | Show help |
-| `/tpvp recap` | Re-open the last death recap |
-| `/tpvp settings` | Open the settings panel |
-| `/tpvp totems` | Toggle totem Tab-skip on/off |
-| `/tbg` | Toggle the AB / BG score overlay |
-| `/tbgwsg` | Toggle the WSG flag carrier overlay |
