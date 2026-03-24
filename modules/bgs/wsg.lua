@@ -303,7 +303,8 @@ function TBGH:UpdateWSGOverlay()
             wsgAlliHP:SetText("")
         end
         local dist = self:GetDistance(hc)
-        if dist then
+        local playerIsFC = (UnitName("player") == hc)
+        if dist and not playerIsFC then
             if dist <= 20 then
                 wsgAlliDist:SetTextColor(1, 0, 0, 1)
             elseif dist <= 40 then
@@ -348,7 +349,8 @@ function TBGH:UpdateWSGOverlay()
             wsgHordeHP:SetText("")
         end
         local dist = self:GetDistance(ac)
-        if dist then
+        local playerIsFC = (UnitName("player") == ac)
+        if dist and not playerIsFC then
             if dist <= 20 then
                 wsgHordeDist:SetTextColor(1, 0, 0, 1)
             elseif dist <= 40 then
@@ -440,8 +442,11 @@ function TBGH:CheckEFCHealthThresholds()
         end
         local cc = self:GetClassColorByName(efcName)
         local cOpen = cc and ("|c" .. cc) or "|cffffd100"
-        local prefix = newThreshold == 25 and "EFC LOW:" or ("EFC " .. newThreshold .. "%:")
-        local msg = prefix .. " " .. cOpen .. efcName .. "|r"
+        local r, g = 1, 1
+        if pct > 50 then r = (100 - pct) / 50 else g = pct / 50 end
+        local hpColor = string.format("|cff%02x%02x%02x", math.floor(r * 255), math.floor(g * 255), 0)
+        local coloredPct = hpColor .. pct .. "%|r"
+        local msg = "EFC " .. coloredPct .. ": " .. cOpen .. efcName .. "|r"
         SendChatMessage(msg, "BATTLEGROUND")
     end
 end
@@ -453,7 +458,7 @@ function TBGH:AnnounceWSG()
     local ac = self.wsg.alliCarrier
     local hc = self.wsg.hordeCarrier
     if not ac and not hc then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r No flag carriers to announce.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r No flag carriers to announce.")
         return
     end
     local parts = {}
@@ -677,38 +682,61 @@ TBGH:RegisterModule({
     end,
 
     -- Settings UI
-    buildSettings = function(parent, prevAnchor)
-        local db = TBGH.db
-        local CSB = TBGH.CreateSmallButton
-        local BTN_W = TBGH.BTN_WIDTH
-        local BTN_M = TBGH.BTN_MARGIN
-        local BTN_G = TBGH.BTN_GAP
+    buildSettings = function(parent, prevFrame)
+        local f = TBGH.CreateSectionFrame(parent, prevFrame, "Warsong Gulch", "Interface\\Icons\\INV_Misc_Rune_07")
 
-        local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        if prevAnchor == parent then
-            label:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -4)
-        else
-            label:SetPoint("TOPLEFT", prevAnchor, "BOTTOMLEFT", 0, -12)
-        end
-        label:SetText("|cffffd100Warsong Gulch|r")
+        -- Enable flag carrier display (top)
+        local check = CreateFrame("CheckButton", "TurtlePvPWSGCheck", f, "UICheckButtonTemplate")
+        check:SetWidth(24)
+        check:SetHeight(24)
+        check:SetPoint("TOPLEFT", f, "TOPLEFT", 18, -26)
+        local checkLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        checkLabel:SetPoint("LEFT", check, "RIGHT", 2, 0)
+        checkLabel:SetText("Enable flag carrier display")
 
-        -- Auto-announce (top-level, independent of overlay)
-        local autoCheck = CreateFrame("CheckButton", "TurtlePvPWSGAutoCheck", parent, "UICheckButtonTemplate")
+        local checkHint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        checkHint:SetPoint("TOPLEFT", check, "BOTTOMLEFT", 4, 2)
+        checkHint:SetTextColor(0.45, 0.45, 0.45, 1)
+        checkHint:SetText("Hint: Shift+Click to reposition in Battlegrounds")
+
+        -- Position controls (right side)
+        TBGH.AddPositionControls(f, "WSG",
+            function()
+                if TBGH.previewSection == "wsg" then
+                    TBGH.HideAllPreviews()
+                else
+                    TBGH.ShowSectionPreview("wsg")
+                end
+            end,
+            function()
+                TBGH.db.wsgPos = nil
+                TBGH.ApplyContainerPos(TBGH.DEFAULT_WSG_POS)
+                if TBGH.previewSection == "wsg" then
+                    TBGH.ShowSectionPreview("wsg")
+                end
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r WSG position reset to default")
+            end
+        )
+
+        -- Auto-announce
+        local autoCheck = CreateFrame("CheckButton", "TurtlePvPWSGAutoCheck", f, "UICheckButtonTemplate")
         autoCheck:SetWidth(24)
         autoCheck:SetHeight(24)
-        autoCheck:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
-        local autoCheckLabel = parent:CreateFontString("TurtlePvPWSGAutoCheckLabel", "OVERLAY", "GameFontNormalSmall")
+        autoCheck:SetPoint("TOPLEFT", checkHint, "BOTTOMLEFT", -4, -2)
+        local autoCheckLabel = f:CreateFontString("TurtlePvPWSGAutoCheckLabel", "OVERLAY", "GameFontNormalSmall")
         autoCheckLabel:SetPoint("LEFT", autoCheck, "RIGHT", 2, 0)
         autoCheckLabel:SetText("Auto-announce EFC low HP (75%/50%/25%)")
 
-        -- Dedup sub-checkbox (indented under auto-announce)
-        local dedupCheck = CreateFrame("CheckButton", "TurtlePvPWSGDedupCheck", parent, "UICheckButtonTemplate")
+        -- Dedup sub-checkbox
+        local dedupCheck = CreateFrame("CheckButton", "TurtlePvPWSGDedupCheck", f, "UICheckButtonTemplate")
         dedupCheck:SetWidth(24)
         dedupCheck:SetHeight(24)
-        dedupCheck:SetPoint("TOPLEFT", autoCheck, "BOTTOMLEFT", 16, -2)
-        local dedupCheckLabel = parent:CreateFontString("TurtlePvPWSGDedupCheckLabel", "OVERLAY", "GameFontNormalSmall")
+        dedupCheck:SetPoint("TOPLEFT", autoCheck, "BOTTOMLEFT", 16, 2)
+        local dedupCheckLabel = f:CreateFontString("TurtlePvPWSGDedupCheckLabel", "OVERLAY", "GameFontNormalSmall")
         dedupCheckLabel:SetPoint("LEFT", dedupCheck, "RIGHT", 2, 0)
         dedupCheckLabel:SetText("Skip if already announced by another user")
+
+        f:SetHeight(118)
 
         local function UpdateDedupEnabled()
             if TBGH.db.wsgAutoAnnounce ~= false then
@@ -720,39 +748,8 @@ TBGH:RegisterModule({
             end
         end
 
-        -- Overlay checkbox (independent of announce)
-        local check = CreateFrame("CheckButton", "TurtlePvPWSGCheck", parent, "UICheckButtonTemplate")
-        check:SetWidth(24)
-        check:SetHeight(24)
-        check:SetPoint("TOPLEFT", dedupCheck, "BOTTOMLEFT", -16, -2)
-        local checkLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        checkLabel:SetPoint("LEFT", check, "RIGHT", 2, 0)
-        checkLabel:SetText("Enable flag carrier display")
-
-        local resetBtn = CSB("TurtlePvPWSGReset", parent, "Reset Pos", BTN_W)
-        resetBtn:SetPoint("RIGHT", parent, "RIGHT", -BTN_M, 0)
-        resetBtn:SetPoint("TOP", check, "TOP", 0, 2)
-
-        local previewBtn = CSB("TurtlePvPWSGPreview", parent, "Preview", BTN_W)
-        previewBtn:SetPoint("RIGHT", resetBtn, "LEFT", -BTN_G, 0)
-
         check:SetScript("OnClick", function()
             TBGH.db.wsgEnabled = this:GetChecked() and true or false
-        end)
-        previewBtn:SetScript("OnClick", function()
-            if TBGH.previewSection == "wsg" then
-                TBGH.HideAllPreviews()
-            else
-                TBGH.ShowSectionPreview("wsg")
-            end
-        end)
-        resetBtn:SetScript("OnClick", function()
-            TBGH.db.wsgPos = nil
-            TBGH.ApplyContainerPos(TBGH.DEFAULT_WSG_POS)
-            if TBGH.previewSection == "wsg" then
-                TBGH.ShowSectionPreview("wsg")
-            end
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r WSG position reset to default")
         end)
         autoCheck:SetScript("OnClick", function()
             TBGH.db.wsgAutoAnnounce = this:GetChecked() and true or false
@@ -762,13 +759,12 @@ TBGH:RegisterModule({
             TBGH.db.wsgDedup = this:GetChecked() and true or false
         end)
 
-        -- Store references for syncSettings
         TBGH._wsgCheck = check
         TBGH._wsgAutoCheck = autoCheck
         TBGH._wsgAutoCheckLabel = autoCheckLabel
         TBGH._wsgDedupCheck = dedupCheck
         TBGH._wsgDedupCheckLabel = dedupCheckLabel
-        return check
+        return f
     end,
 
     syncSettings = function()

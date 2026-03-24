@@ -12,7 +12,7 @@ bgTestFrame:SetScript("OnEvent", function()
         local status = GetBattlefieldStatus(i)
         if status and status ~= "none" then
             DEFAULT_CHAT_FRAME:AddMessage(
-                "|cff00ff00[TurtlePvP]|r Queue slot " .. i ..
+                "|cff00ff00[TurtlePvPEnhanced]|r Queue slot " .. i ..
                 " status='" .. status .. "' -> last arg was: " ..
                 tostring(TBGH._bgTestLastArg))
         end
@@ -123,11 +123,11 @@ autoSignupFrame:SetScript("OnUpdate", function()
             local hits = ScanForBFFrame()
             if table.getn(hits) > 0 then
                 DEFAULT_CHAT_FRAME:AddMessage(
-                    "|cffff4444[TurtlePvP]|r Auto-signup: join frame not found, but these BG frames are visible: " ..
+                    "|cffff4444[TurtlePvPEnhanced]|r Auto-signup: join frame not found, but these BG frames are visible: " ..
                     table.concat(hits, ", ") .. " -- report this so the addon can be updated")
             else
                 DEFAULT_CHAT_FRAME:AddMessage(
-                    "|cffff4444[TurtlePvP]|r Auto-signup: no join frame appeared for " ..
+                    "|cffff4444[TurtlePvPEnhanced]|r Auto-signup: no join frame appeared for " ..
                     tostring(autoSignupFrame._currentBGName))
             end
             autoSignupFrame._state        = "idle"
@@ -169,7 +169,7 @@ autoSignupFrame:SetScript("OnUpdate", function()
         for i, n in ipairs(autoSignupFrame._queuedNames) do
             names = names .. (i > 1 and ", " or "") .. n
         end
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Auto-signup: queued for " .. names)
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Auto-signup: queued for " .. names)
         autoSignupFrame._queuedNames = nil
     end
 
@@ -281,9 +281,9 @@ SLASH_TBGWSGDEBUG1 = "/tbgwsgdebug"
 SlashCmdList["TBGWSGDEBUG"] = function()
     TBGH.wsgDebug = not TBGH.wsgDebug
     if TBGH.wsgDebug then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r WSG message debug ON — pick up a flag to see messages")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r WSG message debug ON — pick up a flag to see messages")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r WSG message debug OFF")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r WSG message debug OFF")
     end
 end
 
@@ -293,11 +293,11 @@ SlashCmdList["TBGSIGNUP"] = function(arg)
 
     local joinFn = _G["JoinBattleground"]
     DEFAULT_CHAT_FRAME:AddMessage(
-        "|cff00ff00[TurtlePvP]|r JoinBattleground type: " .. type(joinFn))
+        "|cff00ff00[TurtlePvPEnhanced]|r JoinBattleground type: " .. type(joinFn))
 
     if arg == "" then
         DEFAULT_CHAT_FRAME:AddMessage(
-            "|cff00ff00[TurtlePvP]|r Usage: /tbgsignup <id>  -- try: 1  2  3")
+            "|cff00ff00[TurtlePvPEnhanced]|r Usage: /tbgsignup <id>  -- try: 1  2  3")
         local found = {}
         for k, v in pairs(_G) do
             if type(k) == "string" and (
@@ -309,7 +309,7 @@ SlashCmdList["TBGSIGNUP"] = function(arg)
             end
         end
         if table.getn(found) > 0 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Matching globals (" .. table.getn(found) .. "):")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Matching globals (" .. table.getn(found) .. "):")
             for _, s in ipairs(found) do
                 DEFAULT_CHAT_FRAME:AddMessage("  " .. s)
             end
@@ -317,14 +317,14 @@ SlashCmdList["TBGSIGNUP"] = function(arg)
                 "BG Globals — Ctrl+A then Ctrl+C to copy",
                 table.concat(found, " | "))
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r No battleground globals found. Click the BG Finder button first, then retry.")
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r No battleground globals found. Click the BG Finder button first, then retry.")
         end
         return
     end
 
     if not joinFn then
         DEFAULT_CHAT_FRAME:AddMessage(
-            "|cffff4444[TurtlePvP]|r JoinBattleground is nil. Click the BG Finder button once first, then try again.")
+            "|cffff4444[TurtlePvPEnhanced]|r JoinBattleground is nil. Click the BG Finder button once first, then try again.")
         return
     end
 
@@ -332,7 +332,7 @@ SlashCmdList["TBGSIGNUP"] = function(arg)
     TBGH._bgTestActive = true
     TBGH._bgTestLastArg = callArg
     DEFAULT_CHAT_FRAME:AddMessage(
-        "|cff00ff00[TurtlePvP]|r Calling JoinBattleground(" .. tostring(callArg) .. ") ...")
+        "|cff00ff00[TurtlePvPEnhanced]|r Calling JoinBattleground(" .. tostring(callArg) .. ") ...")
     joinFn(callArg)
 end
 
@@ -353,7 +353,7 @@ SlashCmdList["TBGMENU"] = function()
     local buildFn = _G["BuildTWBGQueueMenu"]
     local menuFrame = _G["TWBGQueueMinimapMenuFrame"]
     if not buildFn then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r BuildTWBGQueueMenu not found.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r BuildTWBGQueueMenu not found.")
         return
     end
 
@@ -377,9 +377,9 @@ SlashCmdList["TBGMENU"] = function()
 
     local n = table.getn(captured)
     if n == 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r BuildTWBGQueueMenu added 0 items.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r BuildTWBGQueueMenu added 0 items.")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Captured " .. n .. " menu items. Use /tbgqueue <n> to call one:")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Captured " .. n .. " menu items. Use /tbgqueue <n> to call one:")
         for i, s in ipairs(captured) do
             DEFAULT_CHAT_FRAME:AddMessage("  [" .. i .. "] " .. s)
         end
@@ -394,12 +394,12 @@ SlashCmdList["TBGQUEUE"] = function(arg)
     arg = arg and string.gsub(arg, "^%s*(.-)%s*$", "%1") or ""
     local idx = tonumber(arg)
     if not idx then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r Usage: /tbgqueue <n>  (run /tbgmenu first to see numbers)")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r Usage: /tbgqueue <n>  (run /tbgmenu first to see numbers)")
         return
     end
     local entry = TBGH._menuFuncs and TBGH._menuFuncs[idx]
     if not entry or not entry.func then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r No function at index " .. idx .. ". Run /tbgmenu first.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r No function at index " .. idx .. ". Run /tbgmenu first.")
         return
     end
 
@@ -411,7 +411,7 @@ SlashCmdList["TBGQUEUE"] = function(arg)
         end
     end
 
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Calling menu func [" .. idx .. "] = " .. tostring(entry.text))
+    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Calling menu func [" .. idx .. "] = " .. tostring(entry.text))
     TBGH._bgTestActive  = true
     TBGH._bgTestLastArg = entry.text
     entry.func()
@@ -426,7 +426,7 @@ SlashCmdList["TBGQUEUE"] = function(arg)
         end
     end
     if table.getn(newShown) > 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Newly shown frames:")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Newly shown frames:")
         local parts = {}
         for i, s in ipairs(newShown) do
             DEFAULT_CHAT_FRAME:AddMessage("  " .. s)
@@ -434,7 +434,7 @@ SlashCmdList["TBGQUEUE"] = function(arg)
         end
         TBG_ShowCopyBox("Newly shown frames — Ctrl+A Ctrl+C", table.concat(parts, " | "))
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r No new frames appeared. Scanning TWBG/queue globals:")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r No new frames appeared. Scanning TWBG/queue globals:")
         local found = {}
         for k, v in pairs(_G) do
             if type(k) == "string" and (
@@ -456,7 +456,7 @@ SlashCmdList["TBGQUEUE"] = function(arg)
             end
             TBG_ShowCopyBox("TWBG/queue globals — Ctrl+A Ctrl+C", table.concat(parts, " | "))
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r No matching globals found either.")
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r No matching globals found either.")
         end
     end
 end
@@ -507,9 +507,9 @@ SlashCmdList["TPVP"] = function(msg)
     if sub == "totems" then
         db.totemSkip = not (db.totemSkip ~= false)
         if db.totemSkip then
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Totem Tab-skip |cff00ff00ON|r")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Totem Tab-skip |cff00ff00ON|r")
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r Totem Tab-skip |cffff4444OFF|r")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Totem Tab-skip |cffff4444OFF|r")
         end
 
     elseif sub == "totemtest" then
@@ -544,12 +544,103 @@ SlashCmdList["TPVP"] = function(msg)
             TurtlePvPSettingsFrame:Show()
         end
 
+    elseif sub == "recap" then
+        if TBGH.lastRecap then
+            TBGH:ShowRecapFrame()
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r No death recap recorded yet.")
+        end
+
+    elseif sub == "recapdebug" then
+        TBGH.db.recapDebug = not TBGH.db.recapDebug
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Recap UNIT_COMBAT debug: " ..
+            (TBGH.db.recapDebug and "|cff00ff00ON|r (take damage to see args)" or "|cffff4444OFF|r"))
+
+    elseif sub == "missingicons" then
+        TBGH:ShowMissingIconsFrame()
+
+    elseif sub == "clearicons" then
+        for k in pairs(TBGH.db.missingIcons or {}) do TBGH.db.missingIcons[k] = nil end
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Missing icons list cleared.")
+
+    elseif sub == "exportlog" then
+        TBGH:ShowRecapExportFrame()
+
+    elseif sub == "recapmock" then
+        -- Build a fake death snapshot to preview the recap UI without dying
+        local t = GetTime()
+        -- Brutahk (Paladin): Physical + Holy — warm family
+        local e1a = { time=t-9.5, amount=580, overkill=0,  school="Physical", hitType="crit",  attacker="Brutahk",  class="PALADIN", spell="Seal of Command", enriched=true, isCC=false }
+        local e1b = { time=t-8.8, amount=320, overkill=0,  school="Holy",     hitType="crit",  attacker="Brutahk",  class="PALADIN", spell="Holy Shock",      enriched=true, isCC=false }
+        local e1c = { time=t-8.1, amount=210, overkill=0,  school="Physical", hitType="hit",   attacker="Brutahk",  class="PALADIN", spell="Crusader Strike",  enriched=true, isCC=false }
+        -- Frostina (Mage): Fire + Frost + Arcane
+        local e2a = { time=t-7.5, amount=445, overkill=0,  school="Fire",     hitType="crit",  attacker="Frostina", class="MAGE",    spell="Fireball",        enriched=true, isCC=false }
+        local e2b = { time=t-6.8, amount=390, overkill=0,  school="Frost",    hitType="crit",  attacker="Frostina", class="MAGE",    spell="Frostbolt",       enriched=true, isCC=false }
+        local e2c = { time=t-6.0, amount=178, overkill=0,  school="Arcane",   hitType="hit",   attacker="Frostina", class="MAGE",    spell="Arcane Missiles", enriched=true, isCC=false }
+        -- Sneakius (Warlock): Shadow + Nature
+        local e3a = { time=t-5.2, amount=512, overkill=0,  school="Shadow",   hitType="crit",  attacker="Sneakius", class="WARLOCK", spell="Shadow Bolt",     enriched=true, isCC=false }
+        local e3b = { time=t-4.5, amount=198, overkill=0,  school="Nature",   hitType="hit",   attacker="Sneakius", class="WARLOCK", spell="Corruption",      enriched=true, isCC=false }
+        local e3c = { time=t-3.8, amount=264, overkill=0,  school="Shadow",   hitType="hit",   attacker="Sneakius", class="WARLOCK", spell="Drain Life",      enriched=true, isCC=false }
+        -- Grimtusk (Hunter): Physical (melee + ranged)
+        local e4a = { time=t-3.2, amount=310, overkill=0,  school="Physical", hitType="crit",  attacker="Grimtusk", class="HUNTER",  spell="Aimed Shot",      enriched=true, isCC=false }
+        local e4b = { time=t-2.7, amount=160, overkill=0,  school="Physical", hitType="hit",   attacker="Grimtusk", class="HUNTER",  spell="Auto Shot",       enriched=true, isCC=false }
+        -- Vexara (Priest): Holy + Shadow
+        local e5a = { time=t-2.2, amount=280, overkill=0,  school="Shadow",   hitType="crit",  attacker="Vexara",   class="PRIEST",  spell="Mind Blast",      enriched=true, isCC=false }
+        local e5b = { time=t-1.7, amount=145, overkill=0,  school="Holy",     hitType="hit",   attacker="Vexara",   class="PRIEST",  spell="Smite",           enriched=true, isCC=false }
+        -- Stormrage (Druid): Nature + Arcane (overkill)
+        local e6a = { time=t-1.3, amount=220, overkill=0,  school="Nature",   hitType="hit",   attacker="Stormrage",class="DRUID",   spell="Wrath",           enriched=true, isCC=false }
+        local e6b = { time=t-0.8, amount=305, overkill=180,school="Arcane",   hitType="crit",  attacker="Stormrage",class="DRUID",   spell="Starfire",        enriched=true, isCC=false }
+
+        local eCC = { time=t-3.5, isCC=true, ccName="Cheap Shot", ccEnd=t-3.5+3.2, attacker="Sneakius" }
+
+        local grpB  = { total = e1a.amount+e1b.amount+e1c.amount, hits = {e1a,e1b,e1c} }
+        local grpF  = { total = e2a.amount+e2b.amount+e2c.amount, hits = {e2a,e2b,e2c} }
+        local grpS  = { total = e3a.amount+e3b.amount+e3c.amount, hits = {e3a,e3b,e3c} }
+        local grpG  = { total = e4a.amount+e4b.amount,            hits = {e4a,e4b}     }
+        local grpV  = { total = e5a.amount+e5b.amount,            hits = {e5a,e5b}     }
+        local grpD  = { total = e6a.amount+e6b.amount,            hits = {e6a,e6b}     }
+
+        -- Seed mock BG scores so the stat line is visible in the preview
+        TBGH.bgScoreCache = TBGH.bgScoreCache or {}
+        TBGH.bgScoreCache["Brutahk"]   = { kbs=4, deaths=1, hks=18, rank=9,  faction=1 }
+        TBGH.bgScoreCache["Frostina"]  = { kbs=2, deaths=3, hks=11, rank=6,  faction=0 }
+        TBGH.bgScoreCache["Sneakius"]  = { kbs=7, deaths=0, hks=25, rank=11, faction=1 }
+        TBGH.bgScoreCache["Grimtusk"]  = { kbs=1, deaths=2, hks=8,  rank=3,  faction=1 }
+        TBGH.bgScoreCache["Vexara"]    = { kbs=0, deaths=4, hks=5,  rank=1,  faction=0 }
+        TBGH.bgScoreCache["Stormrage"] = { kbs=3, deaths=1, hks=14, rank=7,  faction=0 }
+
+        TBGH.lastRecap = {
+            snapshot       = {e1a,e1b,e1c,e2a,e2b,e2c,eCC,e3a,e3b,e3c,e4a,e4b,e5a,e5b,e6a,e6b},
+            attackerOrder  = {"Brutahk","Frostina","Sneakius","Grimtusk","Vexara","Stormrage"},
+            attackerGroups = { ["Brutahk"]=grpB, ["Frostina"]=grpF, ["Sneakius"]=grpS,
+                               ["Grimtusk"]=grpG, ["Vexara"]=grpV, ["Stormrage"]=grpD },
+            attackerClass  = { ["Brutahk"]="PALADIN", ["Frostina"]="MAGE", ["Sneakius"]="WARLOCK",
+                               ["Grimtusk"]="HUNTER", ["Vexara"]="PRIEST", ["Stormrage"]="DRUID" },
+            totalDamage    = grpB.total+grpF.total+grpS.total+grpG.total+grpV.total+grpD.total,
+            overkill       = 180,
+            killingEntry   = e6b,
+            maxHP          = UnitHealthMax("player") or 3500,
+            stunTotal      = 3.2,
+            incTotal       = 0,
+            rootTotal      = 0,
+        }
+        TBGH:ShowRecapFrame()
+
+    elseif sub == "mockup" then
+        -- Alias for recapmock
+        TBGH:ShowMockupRecap()
+
     else
         local m = DEFAULT_CHAT_FRAME
-        m:AddMessage("|cff00ff00[TurtlePvP]|r Commands:")
-        m:AddMessage("  |cffffff00/tpvp settings|r  — open settings panel")
-        m:AddMessage("  |cffffff00/tpvp totems|r    — toggle totem Tab-skip on/off")
-        m:AddMessage("  |cffffff00/tpvp totemtest|r — debug: show totem detection for current target")
+        m:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r Commands:")
+        m:AddMessage("  |cffffff00/tpvp settings|r     — open settings panel")
+        m:AddMessage("  |cffffff00/tpvp totems|r       — toggle totem Tab-skip on/off")
+        m:AddMessage("  |cffffff00/tpvp totemtest|r    — debug: show totem detection for current target")
+        m:AddMessage("  |cffffff00/tpvp recap|r        — re-open last death recap")
+        m:AddMessage("  |cffffff00/tpvp recapmock|r    — preview recap UI with fake data (alias: mockup)")
+        m:AddMessage("  |cffffff00/tpvp mockup|r       — preview recap UI with fake data")
+        m:AddMessage("  |cffffff00/tpvp recapdebug|r   — toggle UNIT_COMBAT arg logging")
+        m:AddMessage("  |cffffff00/tpvp exportlog|r    — open copyable debug log window")
     end
 end
 
@@ -557,4 +648,4 @@ end
 -- Loaded message
 ---------------------------------------------------------------------
 DEFAULT_CHAT_FRAME:AddMessage(
-    "|cff00ff00[TurtleBG Helper]|r Loaded — /tpvp (help), /tbg (AB), /tbgwsg (WSG flags), /tbgsettings, /tbgdebug")
+    "|cff00ff00[TurtlePvPEnhanced]|r Loaded — /tpvp (help), /tbg (AB), /tbgwsg (WSG flags), /tbgsettings, /tbgdebug")

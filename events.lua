@@ -87,7 +87,39 @@ frame:SetScript("OnEvent", function()
             end
         end
 
+    elseif event == "UNIT_COMBAT" then
+        if arg1 == "player" then
+            if TBGH.db and TBGH.db.recapDebug then
+                TBGH:RecapAddLog(
+                    "[RecapDebug] UNIT_COMBAT arg2=" .. tostring(arg2) ..
+                    " arg3=" .. tostring(arg3) ..
+                    " arg4=" .. tostring(arg4) ..
+                    " arg5=" .. tostring(arg5))
+            end
+            TBGH:RecapOnUnitCombat(arg2, arg3, arg4, arg5)
+        end
+
+    elseif event == "CHAT_MSG_COMBAT_SELF_HITS"
+        or event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS"
+        or event == "CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS" then
+        TBGH:RecapEnrichFromChat(arg1, "melee")
+
+    elseif event == "CHAT_MSG_SPELL_SELF_DAMAGE"
+        or event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE"
+        or event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE"
+        or event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE"
+        or event == "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE"
+        or event == "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE" then
+        TBGH:RecapEnrichFromChat(arg1, "spell")
+
+    elseif event == "UNIT_AURA" then
+        if arg1 == "player" then
+            TBGH:RecapCheckCC()
+        end
+
     elseif event == "PLAYER_DEAD" then
+        TBGH:ScanBattlefieldScores()  -- grab classes from scoreboard before building recap
+        TBGH:RecapOnDead()
         if db.autoRelease and TBGH_GetBGType() then
             RepopMe()
         end
@@ -102,9 +134,13 @@ frame:SetScript("OnEvent", function()
     elseif event == "SPELL_START_OTHER" then
         TBGH:ProcessGUID(arg3)
 
+    elseif event == "UPDATE_BATTLEFIELD_SCORE" then
+        TBGH:ScanBattlefieldScores()
+
     elseif event == "VARIABLES_LOADED" then
         TBGH:ReloadDB()
         db = TBGH.db
+        -- missingIcons is already on TBGH.db via ReloadDB init
         TBGH.hasNampower = (GetNampowerVersion ~= nil)
         TBGH.hasUnitXP = (UnitXP ~= nil)
         if TBGH.hasNampower then
@@ -123,6 +159,8 @@ frame:SetScript("OnEvent", function()
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         TBGH.containerActiveBG = nil
+        TBGH:ScanBattlefieldScores()  -- may already have scores if we zoned in mid-game
+        TBGH:RecapReset()
         -- Reset ALL modules (regardless of current zone)
         for i = 1, nMod do
             local mod = modules[i]

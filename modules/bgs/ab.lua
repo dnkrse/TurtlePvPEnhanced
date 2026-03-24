@@ -129,7 +129,7 @@ for col = 1, 5 do
             local numColor = count == 0 and "|cffff3333" or "|cffff8800"
             local msgColored = "|cffff8800" .. baseName .. " Defenders: " .. numColor .. count .. "/2|r"
             if IsShiftKeyDown() then
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP Preview]|r " .. msgColored)
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced Preview]|r " .. msgColored)
             else
                 SendChatMessage(TBGH.StripColors(msgColored), "WHISPER", nil, "Citrin")
             end
@@ -460,47 +460,54 @@ function TBGH:Project()
     local aTime = aRate > 0 and (self.MAX - aRes) / aRate or 999999
     local hTime = hRate > 0 and (self.MAX - hRes) / hRate or 999999
 
+    -- Hysteresis: only flip the projected winner when the margin exceeds one
+    -- minimum-tick interval (12s). This prevents score-polling jitter from
+    -- toggling the winner display every frame when both sides are nearly equal.
+    local DEAD_HEAT_THRESHOLD = 12
+    local timeDiff = aTime - hTime  -- positive = alliance slower, negative = horde slower
+    local lastWinner = self.prev.projectedWinner  -- "a", "h", or nil
+
+    local winner
+    if math.abs(timeDiff) > DEAD_HEAT_THRESHOLD or aTime >= 999999 or hTime >= 999999 then
+        -- Clear margin — use raw projection
+        winner = (aTime <= hTime) and "a" or "h"
+    elseif lastWinner then
+        -- Within threshold — keep previous winner to avoid flicker
+        winner = lastWinner
+    else
+        -- No previous state — use current score as tiebreaker
+        winner = (aRes >= hRes) and "a" or "h"
+    end
+    self.prev.projectedWinner = winner
+
     local aFinal, hFinal, eta
-    if aTime < hTime then
+    if winner == "a" then
         aFinal = self.MAX
         hFinal = math.min(self.MAX, math.floor((hRes + hRate * aTime) / 10) * 10)
         eta = aTime
-    elseif hTime < aTime then
+    else
         aFinal = math.min(self.MAX, math.floor((aRes + aRate * hTime) / 10) * 10)
         hFinal = self.MAX
         eta = hTime
-    else
-        eta = aTime
-        if aRes >= hRes then
-            aFinal = self.MAX
-            hFinal = math.min(self.MAX, math.floor((hRes + hRate * eta) / 10) * 10)
-        else
-            hFinal = self.MAX
-            aFinal = math.min(self.MAX, math.floor((aRes + aRate * eta) / 10) * 10)
-        end
     end
 
     local mins = math.floor(eta / 60)
     local secs = math.floor(eta - mins * 60)
     local alliColor, hordeColor
-    if aFinal >= hFinal then
-        alliColor = "|cff60b0ff"
+    if winner == "a" then
+        alliColor  = "|cff60b0ff"
         hordeColor = "|cff888888"
     else
-        alliColor = "|cff888888"
+        alliColor  = "|cff888888"
         hordeColor = "|cffff6060"
     end
-    local alliLine = string.format("%s%d|r", alliColor, aFinal)
+    local alliLine  = string.format("%s%d|r", alliColor,  aFinal)
     local hordeLine = string.format("%s%d|r", hordeColor, hFinal)
-    local playerWins
+
     local faction = UnitFactionGroup("player")
-    if faction == "Alliance" then
-        playerWins = (aFinal >= hFinal)
-    else
-        playerWins = (hFinal >= aFinal)
-    end
+    local playerWins = (faction == "Alliance") and (winner == "a") or (winner == "h")
     local etaLabel = playerWins and "Win" or "Lose"
-    local etaLine = string.format("|cffffd100%s %d:%02d|r", etaLabel, mins, secs)
+    local etaLine  = string.format("|cffffd100%s %d:%02d|r", etaLabel, mins, secs)
 
     local basesNeeded = self:BasesNeededToWin(aRes, hRes)
 
@@ -617,7 +624,7 @@ end
 function TBGH:AnnounceAB()
     local alliLine, hordeLine, etaLine, basesLine = self:Project()
     if not alliLine then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r Nothing to announce.")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r Nothing to announce.")
         return
     end
     local msg = "Alliance: " .. alliLine .. " - Horde: " .. hordeLine
@@ -704,14 +711,14 @@ function TBGH:Estimate()
     local aRes, hRes, aBases, hBases = self:GetInfo()
     local msg = DEFAULT_CHAT_FRAME
     if not aRes or not hRes then
-        msg:AddMessage("|cffff4444[TurtlePvP]|r Not in AB or can't read scores. Use /tbgdebug")
+        msg:AddMessage("|cffff4444[TurtlePvPEnhanced]|r Not in AB or can't read scores. Use /tbgdebug")
         return
     end
 
     local aRate, hRate
     aRate, hRate, aBases, hBases = self:GetRates(aBases, hBases)
 
-    msg:AddMessage("|cffffff00========= TurtlePvP Estimate =========|r")
+    msg:AddMessage("|cffffff00========= TurtlePvPEnhanced Estimate =========|r")
     msg:AddMessage(string.format(
         "|cff3399ffAlliance:|r  %d/%d  |  Bases: %d  |  %.1f res/s",
         aRes, self.MAX, aBases, aRate))
@@ -766,7 +773,7 @@ end
 function TBGH:Debug()
     local msg = DEFAULT_CHAT_FRAME
     local n = GetNumWorldStateUI()
-    msg:AddMessage("|cffffff00== TurtlePvP WorldState Debug (" .. n .. " entries) ==|r")
+    msg:AddMessage("|cffffff00== TurtlePvPEnhanced WorldState Debug (" .. n .. " entries) ==|r")
     for i = 1, n do
         local uiType, state, text, icon = GetWorldStateUIInfo(i)
         msg:AddMessage(string.format(
@@ -862,59 +869,51 @@ TBGH:RegisterModule({
         abInitTimer = nil
     end,
 
-    -- Settings UI: build checkboxes, return last anchor
-    buildSettings = function(parent, prevAnchor)
-        local db = TBGH.db
-        local CSB = TBGH.CreateSmallButton
-        local BTN_W = TBGH.BTN_WIDTH
-        local BTN_M = TBGH.BTN_MARGIN
-        local BTN_G = TBGH.BTN_GAP
+    -- Settings UI: build section card, return section frame
+    buildSettings = function(parent, prevFrame)
+        local f = TBGH.CreateSectionFrame(parent, prevFrame, "Arathi Basin", "Interface\\Icons\\INV_Jewelry_Amulet_07")
 
-        local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        if prevAnchor == parent then
-            label:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, -4)
-        else
-            label:SetPoint("TOPLEFT", prevAnchor, "BOTTOMLEFT", 0, -12)
-        end
-        label:SetText("|cffffd100Arathi Basin|r")
-
-        local check = CreateFrame("CheckButton", "TurtlePvPABCheck", parent, "UICheckButtonTemplate")
+        -- Enable checkbox
+        local check = CreateFrame("CheckButton", "TurtlePvPABCheck", f, "UICheckButtonTemplate")
         check:SetWidth(24)
         check:SetHeight(24)
-        check:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
-        local checkLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        check:SetPoint("TOPLEFT", f, "TOPLEFT", 18, -26)
+        local checkLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         checkLabel:SetPoint("LEFT", check, "RIGHT", 2, 0)
         checkLabel:SetText("Enable score display")
 
-        local resetBtn = CSB("TurtlePvPABReset", parent, "Reset Pos", BTN_W)
-        resetBtn:SetPoint("RIGHT", parent, "RIGHT", -BTN_M, 0)
-        resetBtn:SetPoint("TOP", check, "TOP", 0, 2)
+        local checkHint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        checkHint:SetPoint("TOPLEFT", check, "BOTTOMLEFT", 4, 2)
+        checkHint:SetTextColor(0.45, 0.45, 0.45, 1)
+        checkHint:SetText("Hint: Shift+Click to reposition in Battlegrounds")
 
-        local previewBtn = CSB("TurtlePvPABPreview", parent, "Preview", BTN_W)
-        previewBtn:SetPoint("RIGHT", resetBtn, "LEFT", -BTN_G, 0)
+        -- Position controls (right side)
+        TBGH.AddPositionControls(f, "AB",
+            function()
+                if TBGH.previewSection == "ab" then
+                    TBGH.HideAllPreviews()
+                else
+                    TBGH.ShowSectionPreview("ab")
+                end
+            end,
+            function()
+                TBGH.db.abPos = nil
+                TBGH.ApplyContainerPos(TBGH.DEFAULT_CONTAINER_POS)
+                if TBGH.previewSection == "ab" then
+                    TBGH.ShowSectionPreview("ab")
+                end
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvPEnhanced]|r AB score position reset to default")
+            end
+        )
+
+        f:SetHeight(62)
 
         check:SetScript("OnClick", function()
             TBGH.db.abEnabled = this:GetChecked() and true or false
         end)
-        previewBtn:SetScript("OnClick", function()
-            if TBGH.previewSection == "ab" then
-                TBGH.HideAllPreviews()
-            else
-                TBGH.ShowSectionPreview("ab")
-            end
-        end)
-        resetBtn:SetScript("OnClick", function()
-            TBGH.db.abPos = nil
-            TBGH.ApplyContainerPos(TBGH.DEFAULT_CONTAINER_POS)
-            if TBGH.previewSection == "ab" then
-                TBGH.ShowSectionPreview("ab")
-            end
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[TurtlePvP]|r AB score position reset to default")
-        end)
 
-        -- Store check reference for syncSettings
         TBGH._abCheck = check
-        return check
+        return f
     end,
 
     syncSettings = function()

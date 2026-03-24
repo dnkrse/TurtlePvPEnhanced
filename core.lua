@@ -120,6 +120,126 @@ TBGH.CLASS_TCOORDS = {
     ["PALADIN"]     = {0,    0.25, 0.5,  0.75},
 }
 
+-- Spells that uniquely identify a class — used as last-resort class inference
+TBGH.SPELL_CLASS = {
+    -- Warrior
+    ["Mortal Strike"]         = "WARRIOR",
+    ["Bloodthirst"]           = "WARRIOR",
+    ["Whirlwind"]             = "WARRIOR",
+    ["Execute"]               = "WARRIOR",
+    ["Shield Slam"]           = "WARRIOR",
+    ["Overpower"]             = "WARRIOR",
+    ["Slam"]                  = "WARRIOR",
+    ["Rend"]                  = "WARRIOR",
+    ["Revenge"]               = "WARRIOR",
+    -- Rogue
+    ["Backstab"]              = "ROGUE",
+    ["Sinister Strike"]       = "ROGUE",
+    ["Eviscerate"]            = "ROGUE",
+    ["Hemorrhage"]            = "ROGUE",
+    ["Mutilate"]              = "ROGUE",
+    ["Ambush"]                = "ROGUE",
+    ["Garrote"]               = "ROGUE",
+    ["Rupture"]               = "ROGUE",
+    -- Mage
+    ["Frostbolt"]             = "MAGE",
+    ["Fireball"]              = "MAGE",
+    ["Arcane Missiles"]       = "MAGE",
+    ["Frost Nova"]            = "MAGE",
+    ["Cone of Cold"]          = "MAGE",
+    ["Pyroblast"]             = "MAGE",
+    ["Blizzard"]              = "MAGE",
+    ["Scorch"]                = "MAGE",
+    ["Frostfire Bolt"]        = "MAGE",
+    ["Ice Lance"]             = "MAGE",
+    -- Warlock
+    ["Shadow Bolt"]           = "WARLOCK",
+    ["Corruption"]            = "WARLOCK",
+    ["Immolate"]              = "WARLOCK",
+    ["Drain Life"]            = "WARLOCK",
+    ["Drain Soul"]            = "WARLOCK",
+    ["Hellfire"]              = "WARLOCK",
+    ["Rain of Fire"]          = "WARLOCK",
+    ["Conflagrate"]           = "WARLOCK",
+    ["Searing Pain"]          = "WARLOCK",
+    ["Soul Bolt"]             = "WARLOCK",
+    ["Soul Rot"]              = "WARLOCK",
+    -- Priest
+    ["Shadow Word: Pain"]     = "PRIEST",
+    ["Mind Blast"]            = "PRIEST",
+    ["Mind Flay"]             = "PRIEST",
+    ["Devouring Plague"]      = "PRIEST",
+    ["Mana Burn"]             = "PRIEST",
+    ["Vampiric Touch"]        = "PRIEST",
+    ["Shadow Word: Death"]    = "PRIEST",
+    ["Holy Fire"]             = "PRIEST",
+    ["Smite"]                 = "PRIEST",
+    -- Hunter
+    ["Arcane Shot"]           = "HUNTER",
+    ["Multi-Shot"]            = "HUNTER",
+    ["Aimed Shot"]            = "HUNTER",
+    ["Piercing Shots"]        = "HUNTER",
+    ["Serpent Sting"]         = "HUNTER",
+    ["Immolation Trap Effect"] = "HUNTER",
+    ["Concussive Shot"]       = "HUNTER",
+    ["Steady Shot"]           = "HUNTER",
+    ["Kill Shot"]             = "HUNTER",
+    ["Explosive Shot"]        = "HUNTER",
+    ["Mongoose Bite"]         = "HUNTER",
+    ["Raptor Strike"]         = "HUNTER",
+    ["Wing Clip"]             = "HUNTER",
+    ["Carve"]                 = "HUNTER",
+    ["Noxious Assault"]       = "HUNTER",
+    ["Searing Bolt"]          = "HUNTER",
+    ["Explosive Ammunition"]  = "HUNTER",
+    -- Shaman
+    ["Stormstrike"]           = "SHAMAN",
+    ["Earth Shock"]           = "SHAMAN",
+    ["Flame Shock"]           = "SHAMAN",
+    ["Frost Shock"]           = "SHAMAN",
+    ["Lightning Bolt"]        = "SHAMAN",
+    ["Thundercall"]           = "SHAMAN",
+    ["Chain Lightning"]       = "SHAMAN",
+    ["Lightning Shield"]      = "SHAMAN",
+    ["Lightning Strike"]      = "SHAMAN",
+    ["Windfury Attack"]       = "SHAMAN",
+    ["Lava Burst"]            = "SHAMAN",
+    -- Paladin
+    ["Hammer of Justice"]     = "PALADIN",
+    ["Consecration"]          = "PALADIN",
+    ["Holy Shock"]            = "PALADIN",
+    ["Exorcism"]              = "PALADIN",
+    ["Crusader Strike"]       = "PALADIN",
+    ["Seal of Command"]       = "PALADIN",
+    ["Hammer of Wrath"]       = "PALADIN",
+    ["Divine Storm"]          = "PALADIN",
+    ["Strike Together"]       = "PALADIN",
+    -- Druid
+    ["Moonfire"]              = "DRUID",
+    ["Wrath Volley"]          = "DRUID",
+    ["Starfire"]              = "DRUID",
+    ["Wrath"]                 = "DRUID",
+    ["Mangle"]                = "DRUID",
+    ["Shred"]                 = "DRUID",
+    ["Lacerate"]              = "DRUID",
+    ["Rake"]                  = "DRUID",
+    ["Rip"]                   = "DRUID",
+    ["Ferocious Bite"]        = "DRUID",
+    ["Pounce"]                = "DRUID",
+    ["Ravage"]                = "DRUID",
+    ["Insect Swarm"]          = "DRUID",
+}
+
+function TBGH:InferClassFromSpells(hits)
+    for i = 1, table.getn(hits) do
+        local sp = hits[i].spell
+        if sp and self.SPELL_CLASS[sp] then
+            return self.SPELL_CLASS[sp]
+        end
+    end
+    return nil
+end
+
 ---------------------------------------------------------------------
 -- Event frame
 ---------------------------------------------------------------------
@@ -136,6 +256,18 @@ frame:RegisterEvent("VARIABLES_LOADED")
 frame:RegisterEvent("CHAT_MSG_BATTLEGROUND")
 frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 frame:RegisterEvent("PLAYER_DEAD")
+frame:RegisterEvent("UNIT_COMBAT")
+frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
+frame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+frame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
+frame:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS")
+frame:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
+frame:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS")
+frame:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
+frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
+frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE")
+frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE")
+frame:RegisterEvent("UNIT_AURA")
 TBGH.frame = frame
 
 ---------------------------------------------------------------------
@@ -208,7 +340,10 @@ function TBGH:ReloadDB()
     if db.wsgAutoAnnounce == nil then db.wsgAutoAnnounce = true end
     -- if db.autoSignup == nil    then db.autoSignup    = false end
     -- if db.autoSignupBGs == nil then db.autoSignupBGs = {[3]=true} end
-    if db.totemSkip == nil then db.totemSkip = true end
+    if db.totemSkip       == nil then db.totemSkip       = true  end
+    if db.recapEnabled    == nil then db.recapEnabled    = true  end
+    if db.recapAutoExpand == nil then db.recapAutoExpand = false end
+    if db.missingIcons == nil then db.missingIcons = {} end
 end
 
 TBGH:ReloadDB()
@@ -223,7 +358,7 @@ end
 ---------------------------------------------------------------------
 -- Shared UI helpers
 ---------------------------------------------------------------------
-TBGH.BTN_WIDTH = 65
+TBGH.BTN_WIDTH = 48
 TBGH.BTN_MARGIN = 8
 TBGH.BTN_GAP = 4
 
@@ -234,6 +369,95 @@ function TBGH.CreateSmallButton(name, parent, text, width)
     btn:SetText(text)
     btn:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10)
     return btn
+end
+
+-- CreateSectionFrame: create a dark card sub-frame with a gold left accent bar and title.
+-- parent    : the tab content frame
+-- prevFrame : previous section frame (or parent if first)
+-- title     : gold section title string
+-- icon      : (optional) texture path for a 14x14 icon shown before the title
+-- Returns the section frame. Lay content inside it starting at y = -28 from TOPLEFT.
+function TBGH.CreateSectionFrame(parent, prevFrame, title, icon)
+    local f = CreateFrame("Frame", nil, parent)
+    if prevFrame == parent then
+        f:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -8)
+    else
+        f:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -6)
+    end
+    f:SetPoint("RIGHT", parent, "RIGHT", -6, 0)
+    f:SetHeight(80)   -- default; caller should call f:SetHeight() after content
+    f:SetBackdrop({
+        bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    f:SetBackdropColor(0.04, 0.04, 0.04, 0.85)
+    f:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
+
+    -- Left gold accent bar
+    local accent = f:CreateTexture(nil, "ARTWORK")
+    accent:SetWidth(2)
+    accent:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    accent:SetVertexColor(0.8, 0.67, 0.0, 1)
+    accent:SetPoint("TOPLEFT",    f, "TOPLEFT",  10, -8)
+    accent:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 10, 8)
+
+    -- Optional section icon
+    local titleX = 18
+    if icon then
+        local ic = f:CreateTexture(nil, "OVERLAY")
+        ic:SetWidth(14)
+        ic:SetHeight(14)
+        ic:SetTexture(icon)
+        ic:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        ic:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -7)
+        titleX = 38
+    end
+
+    -- Section title
+    local lbl = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    lbl:SetPoint("TOPLEFT", f, "TOPLEFT", titleX, -8)
+    lbl:SetText("|cffffd100" .. title .. "|r")
+
+    -- Divider line below title
+    local divider = f:CreateTexture(nil, "ARTWORK")
+    divider:SetHeight(1)
+    divider:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    divider:SetVertexColor(0.15, 0.15, 0.15, 0.5)
+    divider:SetPoint("TOPLEFT",  f, "TOPLEFT",  14, -23)
+    divider:SetPoint("TOPRIGHT", f, "TOPRIGHT", -6, -23)
+
+    f._accent = accent
+    f._titleLabel = lbl
+    f._divider = divider
+    return f
+end
+
+-- AddPositionControls: adds "Position" label + Move + Reset buttons to a section frame.
+-- sectionKey : string key used for TBGH.previewSection (e.g. "wsg", "ab")
+-- onReset    : function called when Reset is clicked
+-- onMove     : function called when Move is clicked (toggle preview)
+-- Returns: posLabel, moveBtn, resetBtn
+function TBGH.AddPositionControls(sectionFrame, sectionKey, onMove, onReset)
+    local BTN_W = TBGH.BTN_WIDTH
+    local BTN_M = 10
+    local BTN_G = TBGH.BTN_GAP
+
+    local posLabel = sectionFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    posLabel:SetPoint("TOPRIGHT", sectionFrame, "TOPRIGHT", -BTN_M, -8)
+    posLabel:SetTextColor(0.5, 0.5, 0.5, 1)
+    posLabel:SetText("Position")
+
+    local resetBtn = TBGH.CreateSmallButton("TurtlePvP"..sectionKey.."Reset", sectionFrame, "Reset", BTN_W)
+    resetBtn:SetPoint("TOPRIGHT", sectionFrame, "TOPRIGHT", -BTN_M, -22)
+    resetBtn:SetScript("OnClick", onReset)
+
+    local moveBtn = TBGH.CreateSmallButton("TurtlePvP"..sectionKey.."Move", sectionFrame, "Move", BTN_W)
+    moveBtn:SetPoint("RIGHT", resetBtn, "LEFT", -BTN_G, 0)
+    moveBtn:SetScript("OnClick", onMove)
+
+    return posLabel, moveBtn, resetBtn
 end
 
 ---------------------------------------------------------------------
@@ -334,11 +558,65 @@ end)
 ---------------------------------------------------------------------
 -- Class lookup (shared utility)
 ---------------------------------------------------------------------
-TBGH.classCache = {}
+TBGH.classCache    = {}
+TBGH.bgScoreCache  = {}  -- name -> { kbs, deaths, hks }
+
+-- Proactively cache classes for every unit ID currently accessible.
+-- Call this whenever we know enemies are nearby (e.g. on each UNIT_COMBAT).
+function TBGH:ScanClassesNow()
+    local function tryUnit(uid)
+        local uName = UnitName(uid)
+        if uName and uName ~= "Unknown" and not self.classCache[uName] then
+            local _, engClass = UnitClass(uid)
+            if engClass then self.classCache[uName] = engClass end
+        end
+    end
+    tryUnit("target")
+    tryUnit("targettarget")
+    tryUnit("mouseover")
+    local numRaid = GetNumRaidMembers()
+    for r = 1, numRaid do
+        tryUnit("raid" .. r)
+        tryUnit("raid" .. r .. "target")
+    end
+    local numParty = GetNumPartyMembers()
+    for p = 1, numParty do
+        tryUnit("party" .. p)
+        tryUnit("party" .. p .. "target")
+    end
+end
+
+-- Scan the BG scoreboard and cache name -> class for all listed players.
+-- GetBattlefieldScore returns: name, kbs, hks, deaths, honor, faction, rank, race, class
+-- "class" is the localised display name (English on TurtleWoW), e.g. "Warrior".
+function TBGH:ScanBattlefieldScores()
+    if type(GetNumBattlefieldScores) ~= "function" then return end
+    RequestBattlefieldScoreData()
+    local n = GetNumBattlefieldScores()
+    for i = 1, n do
+        local name, kbs, hks, deaths, _, faction, rank, _, cls = GetBattlefieldScore(i)
+        if name then
+            if cls and cls ~= "" then
+                local token = strupper(cls)
+                if not self.classCache[name] then
+                    self.classCache[name] = token
+                end
+            end
+            self.bgScoreCache[name] = {
+                kbs     = kbs     or 0,
+                deaths  = deaths  or 0,
+                hks     = hks     or 0,
+                rank    = rank    or 0,
+                faction = faction or 0,
+            }
+        end
+    end
+end
 
 function TBGH:GetClassByName(name)
     if not name then return nil end
     if self.classCache[name] then return self.classCache[name] end
+    -- Check ally frames
     local numMembers = GetNumRaidMembers()
     for r = 1, numMembers do
         local rName = UnitName("raid" .. r)
@@ -356,15 +634,31 @@ function TBGH:GetClassByName(name)
             return engClass
         end
     end
-    if UnitName("target") == name then
-        local _, engClass = UnitClass("target")
-        if engClass then self.classCache[name] = engClass end
-        return engClass
+    -- Check enemy-accessible unit IDs
+    local enemyIDs = { "target", "targettarget", "mouseover" }
+    for _, uid in ipairs(enemyIDs) do
+        if UnitName(uid) == name then
+            local _, engClass = UnitClass(uid)
+            if engClass then self.classCache[name] = engClass end
+            return engClass
+        end
     end
-    if UnitName("mouseover") == name then
-        local _, engClass = UnitClass("mouseover")
-        if engClass then self.classCache[name] = engClass end
-        return engClass
+    -- Check raid/party members' current targets (enemies in BG)
+    for r = 1, numMembers do
+        local uid = "raid" .. r .. "target"
+        if UnitName(uid) == name then
+            local _, engClass = UnitClass(uid)
+            if engClass then self.classCache[name] = engClass end
+            return engClass
+        end
+    end
+    for p = 1, numParty do
+        local uid = "party" .. p .. "target"
+        if UnitName(uid) == name then
+            local _, engClass = UnitClass(uid)
+            if engClass then self.classCache[name] = engClass end
+            return engClass
+        end
     end
     return nil
 end

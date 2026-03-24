@@ -17,21 +17,32 @@ settingsFrame:RegisterForDrag("LeftButton")
 settingsFrame:SetScript("OnDragStart", function() settingsFrame:StartMoving() end)
 settingsFrame:SetScript("OnDragStop", function() settingsFrame:StopMovingOrSizing() end)
 settingsFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 },
+    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
 })
+settingsFrame:SetBackdropColor(0.04, 0.04, 0.04, 0.95)
+settingsFrame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
 settingsFrame:Hide()
 
 -- Title
-local settingsTitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-settingsTitle:SetPoint("TOP", settingsFrame, "TOP", 0, -16)
-settingsTitle:SetText("TurtlePvP")
+local settingsTitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+settingsTitle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 12, -10)
+settingsTitle:SetTextColor(1, 0.82, 0, 1)
+settingsTitle:SetText("TurtlePvPEnhanced")
+
+-- Title separator
+local titleSep = settingsFrame:CreateTexture(nil, "ARTWORK")
+titleSep:SetHeight(1)
+titleSep:SetPoint("TOPLEFT",  settingsFrame, "TOPLEFT",  8, -26)
+titleSep:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -8, -26)
+titleSep:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+titleSep:SetVertexColor(0.35, 0.35, 0.35, 0.8)
 
 -- Close button
 local closeBtn = CreateFrame("Button", "TurtlePvPSettingsClose", settingsFrame, "UIPanelCloseButton")
-closeBtn:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -4, -4)
+closeBtn:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", 2, 2)
 
 ---------------------------------------------------------------------
 -- Preview helpers — delegate to modules
@@ -63,69 +74,191 @@ TBGH.ShowSectionPreview = ShowSectionPreview
 ---------------------------------------------------------------------
 local activeTab = "bg"
 
-local bgTabContent = CreateFrame("Frame", nil, settingsFrame)
-bgTabContent:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 12, -40)
-bgTabContent:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -12, 46)
+-- MakeThinScrollbar: minimal 5px track + gold thumb, mouse-wheel + drag to scroll.
+-- vH: explicit visible height — avoids relying on GetHeight() before layout is resolved.
+-- Returns an UpdateThumb() function to call after externally resetting scroll position.
+local function MakeThinScrollbar(wrapper, sf, child, vH)
+    local PAD = 4
+    local BAR_W = 5
 
-local combatTabContent = CreateFrame("Frame", nil, settingsFrame)
-combatTabContent:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 12, -40)
-combatTabContent:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -12, 46)
-combatTabContent:Hide()
+    local track = wrapper:CreateTexture(nil, "BACKGROUND")
+    track:SetWidth(BAR_W)
+    track:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    track:SetVertexColor(0.06, 0.06, 0.06, 0.85)
+    track:SetPoint("TOPRIGHT",    wrapper, "TOPRIGHT",    -3, -PAD)
+    track:SetPoint("BOTTOMRIGHT", wrapper, "BOTTOMRIGHT", -3,  PAD)
 
-local function StyleTab(tab, selected)
-    if selected then
-        tab:SetTextColor(1, 0.82, 0)
-        tab:SetBackdropColor(0.2, 0.2, 0.2, 1)
-        tab:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
-        tab:SetHeight(28)
-    else
-        tab:SetTextColor(0.6, 0.6, 0.6)
-        tab:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-        tab:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
-        tab:SetHeight(24)
+    local thumb = CreateFrame("Frame", nil, wrapper)
+    thumb:SetWidth(BAR_W)
+    local thumbTex = thumb:CreateTexture(nil, "OVERLAY")
+    thumbTex:SetAllPoints(thumb)
+    thumbTex:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    thumbTex:SetVertexColor(0.8, 0.67, 0.0, 0.75)
+    thumb:Hide()
+
+    local trkH = vH - PAD * 2   -- constant: track pixel height
+
+    local function UpdateThumb()
+        local cH = child:GetHeight()
+        if cH <= vH then thumb:Hide(); return end
+        local thmH   = math.max(16, trkH * vH / cH)
+        local rangeT = trkH - thmH
+        local rangeS = cH - vH
+        local posY   = rangeS > 0 and (sf:GetVerticalScroll() / rangeS * rangeT) or 0
+        thumb:SetHeight(thmH)
+        thumb:ClearAllPoints()
+        thumb:SetPoint("TOPRIGHT", wrapper, "TOPRIGHT", -3, -(PAD + posY))
+        thumb:Show()
     end
+
+    local dragging, dragStartY, dragStartScroll = false, 0, 0
+    thumb:EnableMouse(true)
+    thumb:SetScript("OnMouseDown", function()
+        dragging = true
+        local _, sy = GetCursorPosition()
+        dragStartY     = sy / UIParent:GetEffectiveScale()
+        dragStartScroll = sf:GetVerticalScroll()
+    end)
+    thumb:SetScript("OnMouseUp", function() dragging = false end)
+
+    sf:SetScript("OnUpdate", function()
+        if not dragging then return end
+        local _, cy = GetCursorPosition()
+        local dy     = dragStartY - cy / UIParent:GetEffectiveScale()
+        local cH     = child:GetHeight()
+        local thmH   = math.max(16, trkH * vH / cH)
+        local rangeT = trkH - thmH
+        local rangeS = cH - vH
+        if rangeT > 0 then
+            local new = math.max(0, math.min(rangeS, dragStartScroll + dy * rangeS / rangeT))
+            sf:SetVerticalScroll(new)
+            UpdateThumb()
+        end
+    end)
+
+    sf:EnableMouseWheel(true)
+    sf:SetScript("OnMouseWheel", function()
+        local cH     = child:GetHeight()
+        local rangeS = math.max(0, cH - vH)
+        local new    = math.max(0, math.min(rangeS, sf:GetVerticalScroll() - arg1 * 30))
+        sf:SetVerticalScroll(new)
+        UpdateThumb()
+    end)
+
+    return UpdateThumb
+end
+
+-- View height: settingsFrame(400) - header(30) - tabs(46) = 324
+local SCROLL_VIEW_H = settingsFrame:GetHeight() - 76
+
+-- BG tab: wrapper → scroll frame → scroll child (bgTabContent)
+local bgWrapper = CreateFrame("Frame", nil, settingsFrame)
+bgWrapper:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 6, -30)
+bgWrapper:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -12, 46)
+
+local bgScrollFrame = CreateFrame("ScrollFrame", "TurtlePvPBGScrollFrame", bgWrapper)
+bgScrollFrame:SetPoint("TOPLEFT", bgWrapper, "TOPLEFT", 0, 0)
+bgScrollFrame:SetPoint("BOTTOMRIGHT", bgWrapper, "BOTTOMRIGHT", -12, 0)
+
+local bgTabContent = CreateFrame("Frame", nil, bgScrollFrame)
+bgTabContent:SetWidth(300)
+bgTabContent:SetHeight(374)  -- 8 + 62+6 + 118+6 + 54+6 + 54+6 + 54 = exact BG content height
+bgScrollFrame:SetScrollChild(bgTabContent)
+
+-- Combat tab: wrapper → scroll frame → scroll child (combatTabContent)
+local combatWrapper = CreateFrame("Frame", nil, settingsFrame)
+combatWrapper:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 6, -30)
+combatWrapper:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -12, 46)
+combatWrapper:Hide()
+
+local combatScrollFrame = CreateFrame("ScrollFrame", "TurtlePvPCombatScrollFrame", combatWrapper)
+combatScrollFrame:SetPoint("TOPLEFT", combatWrapper, "TOPLEFT", 0, 0)
+combatScrollFrame:SetPoint("BOTTOMRIGHT", combatWrapper, "BOTTOMRIGHT", -12, 0)
+
+local combatTabContent = CreateFrame("Frame", nil, combatScrollFrame)
+combatTabContent:SetWidth(300)
+combatTabContent:SetHeight(294)  -- 8 + 80+6 + 114+6 + 80 = exact combat content height
+combatScrollFrame:SetScrollChild(combatTabContent)
+
+local bgUpdateThumb     = MakeThinScrollbar(bgWrapper,     bgScrollFrame,     bgTabContent,     SCROLL_VIEW_H)
+local combatUpdateThumb = MakeThinScrollbar(combatWrapper, combatScrollFrame, combatTabContent, SCROLL_VIEW_H)
+
+local function MakeSettingsTab(frameName, labelText, width)
+    local f = CreateFrame("Button", frameName, settingsFrame)
+    f:SetWidth(width)
+    f:SetHeight(28)
+    f:EnableMouse(true)
+
+    local function SetTex(active)
+        local tex = active
+            and "Interface\\PaperDollInfoFrame\\UI-Character-ActiveTab"
+            or  "Interface\\PaperDollInfoFrame\\UI-Character-InactiveTab"
+        -- v0=0,v1=1: open side faces up so tab connects to the frame above it
+        local v0, v1 = 0, 1
+        f.L:SetTexture(tex); f.L:SetTexCoord(0,    0.25, v0, v1)
+        f.R:SetTexture(tex); f.R:SetTexCoord(0.75, 1,    v0, v1)
+        f.M:SetTexture(tex); f.M:SetTexCoord(0.25, 0.75, v0, v1)
+    end
+
+    local L = f:CreateTexture(nil, "BACKGROUND")
+    L:SetWidth(16); L:SetPoint("LEFT", f, "LEFT", 0, 0)
+    L:SetPoint("TOP", f, "TOP", 0, 0); L:SetPoint("BOTTOM", f, "BOTTOM", 0, 0)
+    f.L = L
+
+    local R = f:CreateTexture(nil, "BACKGROUND")
+    R:SetWidth(16); R:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+    R:SetPoint("TOP", f, "TOP", 0, 0); R:SetPoint("BOTTOM", f, "BOTTOM", 0, 0)
+    f.R = R
+
+    local M = f:CreateTexture(nil, "BACKGROUND")
+    M:SetPoint("LEFT", L, "RIGHT", 0, 0); M:SetPoint("RIGHT", R, "LEFT", 0, 0)
+    M:SetPoint("TOP", f, "TOP", 0, 0); M:SetPoint("BOTTOM", f, "BOTTOM", 0, 0)
+    f.M = M
+
+    local lbl = f:CreateFontString(nil, "OVERLAY")
+    lbl:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+    lbl:SetPoint("CENTER", f, "CENTER", 0, 2)
+    lbl:SetText(labelText)
+    f.lbl = lbl
+
+    f.SetActive = function(self, active)
+        SetTex(active)
+        if active then
+            self.lbl:SetTextColor(1, 0.82, 0)
+        else
+            self.lbl:SetTextColor(0.7, 0.7, 0.7)
+        end
+    end
+
+    SetTex(false)
+    return f
+end
+
+local function UpdateScrollMetrics()
+    bgUpdateThumb()
+    combatUpdateThumb()
 end
 
 local function UpdateSettingsTabs()
     if activeTab == "bg" then
-        bgTabContent:Show()
-        combatTabContent:Hide()
-        StyleTab(TurtlePvPTabBG, true)
-        StyleTab(TurtlePvPTabCombat, false)
+        bgWrapper:Show()
+        combatWrapper:Hide()
+        TurtlePvPTabBG:SetActive(true)
+        TurtlePvPTabCombat:SetActive(false)
     else
-        bgTabContent:Hide()
-        combatTabContent:Show()
-        StyleTab(TurtlePvPTabBG, false)
-        StyleTab(TurtlePvPTabCombat, true)
+        bgWrapper:Hide()
+        combatWrapper:Show()
+        TurtlePvPTabBG:SetActive(false)
+        TurtlePvPTabCombat:SetActive(true)
     end
 end
 
 -- Tab buttons
-local tabBG = CreateFrame("Button", "TurtlePvPTabBG", settingsFrame)
-tabBG:SetWidth(100)
-tabBG:SetHeight(28)
-tabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", 12, 2)
-tabBG:SetBackdrop({bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 12,
-    insets = {left = 2, right = 2, top = 2, bottom = 2}})
-local tabBGText = tabBG:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-tabBGText:SetPoint("CENTER", tabBG, "CENTER", 0, 0)
-tabBGText:SetText("Battlegrounds")
-tabBG.SetTextColor = function(self, r, g, b) tabBGText:SetTextColor(r, g, b) end
+local tabBG = MakeSettingsTab("TurtlePvPTabBG", "Battlegrounds", 110)
+tabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", 10, 0)
 
-local tabCombat = CreateFrame("Button", "TurtlePvPTabCombat", settingsFrame)
-tabCombat:SetWidth(80)
-tabCombat:SetHeight(24)
+local tabCombat = MakeSettingsTab("TurtlePvPTabCombat", "Utilities", 90)
 tabCombat:SetPoint("LEFT", tabBG, "RIGHT", -2, 0)
-tabCombat:SetBackdrop({bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true, tileSize = 16, edgeSize = 12,
-    insets = {left = 2, right = 2, top = 2, bottom = 2}})
-local tabCombatText = tabCombat:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-tabCombatText:SetPoint("CENTER", tabCombat, "CENTER", 0, 0)
-tabCombatText:SetText("Utilities")
-tabCombat.SetTextColor = function(self, r, g, b) tabCombatText:SetTextColor(r, g, b) end
 
 tabBG:SetScript("OnClick", function()
     activeTab = "bg"
@@ -138,8 +271,8 @@ tabCombat:SetScript("OnClick", function()
     HideAllPreviews()
 end)
 
-StyleTab(tabBG, true)
-StyleTab(tabCombat, false)
+tabBG:SetActive(true)
+tabCombat:SetActive(false)
 
 ---------------------------------------------------------------------
 -- BATTLEGROUNDS TAB — Build module settings dynamically
@@ -185,7 +318,7 @@ for i, def in ipairs(autoBGDefs) do
             for _, v in pairs(db.autoSignupBGs) do if v then count = count + 1 end end
             if count >= 3 then
                 this:SetChecked(false)
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvP]|r You can queue for at most 3 battlegrounds.")
+                DEFAULT_CHAT_FRAME:AddMessage("|cffff4444[TurtlePvPEnhanced]|r You can queue for at most 3 battlegrounds.")
                 return
             end
         end
@@ -210,15 +343,13 @@ end)
 ---------------------------------------------------------------------
 -- COMBAT TAB — Combat section
 ---------------------------------------------------------------------
-local combatSectionLabel = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-combatSectionLabel:SetPoint("TOPLEFT", combatTabContent, "TOPLEFT", 8, -8)
-combatSectionLabel:SetText("|cffffd100Combat|r")
+local combatFrame = TBGH.CreateSectionFrame(combatTabContent, combatTabContent, "Combat", "Interface\\Icons\\ability_meleedamage")
 
-local totemSkipCheck = CreateFrame("CheckButton", "TurtlePvPTotemSkipCheck", combatTabContent, "UICheckButtonTemplate")
+local totemSkipCheck = CreateFrame("CheckButton", "TurtlePvPTotemSkipCheck", combatFrame, "UICheckButtonTemplate")
 totemSkipCheck:SetWidth(24)
 totemSkipCheck:SetHeight(24)
-totemSkipCheck:SetPoint("TOPLEFT", combatSectionLabel, "BOTTOMLEFT", 0, -4)
-local totemSkipLabel = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+totemSkipCheck:SetPoint("TOPLEFT", combatFrame, "TOPLEFT", 18, -26)
+local totemSkipLabel = combatFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 totemSkipLabel:SetPoint("LEFT", totemSkipCheck, "RIGHT", 2, 0)
 totemSkipLabel:SetText("Skip totems when Tab-targeting")
 
@@ -226,11 +357,11 @@ totemSkipCheck:SetScript("OnClick", function()
     TBGH.db.totemSkip = this:GetChecked() and true or false
 end)
 
-local autoReleaseCheck = CreateFrame("CheckButton", "TurtlePvPAutoReleaseCheck", combatTabContent, "UICheckButtonTemplate")
+local autoReleaseCheck = CreateFrame("CheckButton", "TurtlePvPAutoReleaseCheck", combatFrame, "UICheckButtonTemplate")
 autoReleaseCheck:SetWidth(24)
 autoReleaseCheck:SetHeight(24)
 autoReleaseCheck:SetPoint("TOPLEFT", totemSkipCheck, "BOTTOMLEFT", 0, 2)
-local autoReleaseLabel = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+local autoReleaseLabel = combatFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 autoReleaseLabel:SetPoint("LEFT", autoReleaseCheck, "RIGHT", 2, 0)
 autoReleaseLabel:SetText("Auto-release spirit on death (BGs only)")
 
@@ -238,18 +369,18 @@ autoReleaseCheck:SetScript("OnClick", function()
     TBGH.db.autoRelease = this:GetChecked() and true or false
 end)
 
+combatFrame:SetHeight(80)
+
 ---------------------------------------------------------------------
 -- COMBAT TAB — Gadgets section
 ---------------------------------------------------------------------
-local gadgetsSectionLabel = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-gadgetsSectionLabel:SetPoint("TOPLEFT", autoReleaseCheck, "BOTTOMLEFT", 0, -10)
-gadgetsSectionLabel:SetText("|cffffd100Gadgets|r")
+local gadgetFrame = TBGH.CreateSectionFrame(combatTabContent, combatFrame, "Gadgets", "Interface\\Icons\\trade_engineering")
 
-local helmCheck = CreateFrame("CheckButton", "TurtlePvPHelmCheck", combatTabContent, "UICheckButtonTemplate")
+local helmCheck = CreateFrame("CheckButton", "TurtlePvPHelmCheck", gadgetFrame, "UICheckButtonTemplate")
 helmCheck:SetWidth(24)
 helmCheck:SetHeight(24)
-helmCheck:SetPoint("TOPLEFT", gadgetsSectionLabel, "BOTTOMLEFT", 0, -4)
-local helmCheckLabel = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+helmCheck:SetPoint("TOPLEFT", gadgetFrame, "TOPLEFT", 18, -26)
+local helmCheckLabel = gadgetFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 helmCheckLabel:SetPoint("LEFT", helmCheck, "RIGHT", 2, 0)
 helmCheckLabel:SetText("Auto-hide helmet on equip")
 
@@ -257,10 +388,10 @@ local helmItemChecks = {}
 local helmItemLabels = {}
 for i = 1, table.getn(TBGH.HELM_AUTO_HIDE_ITEMS) do
     local entry = TBGH.HELM_AUTO_HIDE_ITEMS[i]
-    local cb = CreateFrame("CheckButton", "TurtlePvPHelmItemCheck"..entry.id, combatTabContent, "UICheckButtonTemplate")
+    local cb = CreateFrame("CheckButton", "TurtlePvPHelmItemCheck"..entry.id, gadgetFrame, "UICheckButtonTemplate")
     cb:SetWidth(20)
     cb:SetHeight(20)
-    local lbl = combatTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local lbl = gadgetFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lbl:SetPoint("LEFT", cb, "RIGHT", 2, 0)
     lbl:SetText(entry.name)
     cb._helmId = entry.id
@@ -273,9 +404,22 @@ for i = 1, table.getn(TBGH.HELM_AUTO_HIDE_ITEMS) do
     helmItemChecks[i] = cb
     helmItemLabels[i] = lbl
 end
-helmItemChecks[1]:SetPoint("TOPLEFT", helmCheck, "BOTTOMLEFT", 16, -2)
+helmItemChecks[1]:SetPoint("TOPLEFT", helmCheck, "BOTTOMLEFT", 16, 0)
 for j = 2, table.getn(helmItemChecks) do
     helmItemChecks[j]:SetPoint("TOPLEFT", helmItemChecks[j-1], "BOTTOMLEFT", 0, 2)
+end
+
+gadgetFrame:SetHeight(60 + table.getn(helmItemChecks) * 18)
+
+---------------------------------------------------------------------
+-- COMBAT TAB — Build module settings dynamically
+---------------------------------------------------------------------
+local combatLastAnchor = gadgetFrame
+for i = 1, table.getn(TBGH.modules) do
+    local mod = TBGH.modules[i]
+    if mod.tab == "combat" and mod.buildSettings then
+        combatLastAnchor = mod.buildSettings(combatTabContent, combatLastAnchor)
+    end
 end
 
 local function SyncHelmSubChecks(enabled)
@@ -300,11 +444,6 @@ end)
 ---------------------------------------------------------------------
 -- BATTLEGROUNDS TAB — Info text
 ---------------------------------------------------------------------
-local settingsInfo = bgTabContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-settingsInfo:SetPoint("TOPLEFT", bgLastAnchor, "BOTTOMLEFT", -16, -14)
-settingsInfo:SetTextColor(0.7, 0.7, 0.7, 1)
-settingsInfo:SetText("Click Preview, then drag to reposition.\nEach module has its own saved position.")
-
 ---------------------------------------------------------------------
 -- Credit line
 ---------------------------------------------------------------------
@@ -354,6 +493,10 @@ settingsFrame:SetScript("OnShow", function()
         helmItemChecks[i]:SetChecked(itemOn)
     end
     SyncHelmSubChecks(helmEnabled)
+    -- Reset scroll positions to top and refresh thumb positions
+    bgScrollFrame:SetVerticalScroll(0)
+    combatScrollFrame:SetVerticalScroll(0)
+    UpdateScrollMetrics()
     UpdateSettingsTabs()
     TBGH.previewSection = nil
 end)

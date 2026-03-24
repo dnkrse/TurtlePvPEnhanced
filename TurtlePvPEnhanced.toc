@@ -1,13 +1,18 @@
 ## Interface: 11200
-## Title: TurtlePvP
+## Title: TurtlePvPEnhanced
 ## Notes: Various enhancements for PvP players on TurtleWoW 
 ## Author: Citrin (Tel'Abim - TurtleWoW)
 ## SavedVariables: TurtlePvPDB
 ## X-Category: Battlegrounds/PvP
 ## Version: 1.1
 core.lua
-ab.lua
-wsg.lua
+modules\bgs\ab.lua
+modules\bgs\wsg.lua
+modules\bgs\av.lua
+modules\bgs\tg.lua
+modules\bgs\br.lua
+data\database_icons.lua
+modules\deathrecap.lua
 events.lua
 minimap.lua
 settings.lua
