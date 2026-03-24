@@ -8,6 +8,8 @@ A PvP utility addon for **Turtle WoW** (Patch 1.18.1+).
 - See exactly who killed you and what they used
 - Know if you died to burst, procs, or CC setup
 
+![Death Recap](images/deathrecap.png)
+
 **Warsong Gulch**
 - Flag carrier overlay with live distance tracking for both factions
 
