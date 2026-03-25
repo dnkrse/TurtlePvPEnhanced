@@ -194,8 +194,19 @@ local SPELL_ICONS = {
     -- Shaman — TurtleWoW custom
     ["Tidal Waves"]           = "Interface\\Icons\\spell_shaman_tidalwaves",
     ["Spirit Link"]           = "Interface\\Icons\\spell_shaman_spiritlink",
+    -- Shaman totem projectiles — no DBC spell record; show the source totem's icon
+    ["Searing Bolt"]          = "Interface\\Icons\\spell_fire_searingtotem",   -- Searing Totem
+    ["Magma Totem"]           = "Interface\\Icons\\spell_fire_selfdestruct",   -- Magma Totem ticks
+    ["Fire Nova"]             = "Interface\\Icons\\spell_fire_sealoffire",     -- Fire Nova Totem
     -- Mage — TurtleWoW custom
     ["Focusing Crystal"]      = "Interface\\Icons\\spell_mage_focusingcrystal",
+}
+
+-- Maps totem/guardian spell names to their source totem for tooltip display.
+-- Tooltip title shows the totem name; a subtitle shows the actual spell fired.
+local TOTEM_SPELL_SOURCE = {
+    ["Searing Bolt"] = "Searing Totem",
+    ["Fire Nova"]    = "Fire Nova Totem",
 }
 
 -- School overrides for weapon procs and other spells that UNIT_COMBAT mis-reports as Physical.
@@ -451,6 +462,20 @@ function TBGH:RecapEnrichFromChat(msg, msgType)
             _, _, amt, src, sp = string.find(msg, "^You suffer (%d+) .-damage from (.-)%'s (.+)%.")
             if src then attacker = src; spell = sp; hitType = "dot"; chatAmt = tonumber(amt) end
         end
+        -- Trap / AoE spells use non-standard verbs: "explodes on", "ignites", "engulfs"
+        -- "Huntername's Explosive Trap explodes on you for 282 Fire damage."
+        if not attacker then
+            _, _, src, sp, amt = string.find(msg, "^(.-)%'s (.+) explodes on you for (%d+)")
+            if src then attacker = src; spell = sp; hitType = "hit"; chatAmt = tonumber(amt) end
+        end
+        if not attacker then
+            _, _, src, sp, amt = string.find(msg, "^(.-)%'s (.+) ignites you for (%d+)")
+            if src then attacker = src; spell = sp; hitType = "dot"; chatAmt = tonumber(amt) end
+        end
+        if not attacker then
+            _, _, src, sp, amt = string.find(msg, "^(.-)%'s (.+) engulfs you for (%d+)")
+            if src then attacker = src; spell = sp; hitType = "dot"; chatAmt = tonumber(amt) end
+        end
     end
 
     if not attacker or not chatAmt or chatAmt <= 0 then return end
@@ -460,8 +485,23 @@ function TBGH:RecapEnrichFromChat(msg, msgType)
     local _, _, totemOwner = string.find(attacker, "%((.-)%)$")
     if totemOwner then attacker = totemOwner end
 
+    -- Resolve enemy pet attacker to its owner via petCache (populated from party/raid pet unit IDs).
+    local petOwner = TBGH.petCache[attacker]
+    if petOwner then
+        self:RecapAddLog("[RecapDebug] Pet " .. attacker .. " -> owner " .. petOwner)
+        attacker = petOwner
+    end
+
     -- Prime class cache: attacker just hit us, they are likely our current target now
     local attackerClass = TBGH:GetClassByName(attacker)
+
+    -- Skip NPC sources: if we're in a BG and the attacker doesn't appear in the
+    -- scoreboard and has no known player class, they are likely an NPC.
+    local inBG = TBGH_GetBGType() ~= nil
+    if inBG and not attackerClass and not TBGH.bgScoreCache[attacker] then
+        self:RecapAddLog("[RecapDebug] Skipping NPC attacker: " .. tostring(attacker))
+        return
+    end
 
     -- Backward-fill: if UNIT_COMBAT already fired before this chat message arrived,
     -- find the latest unenriched pending entry with the same amount and fill it in.
@@ -690,9 +730,6 @@ local function BuildRecapLines(recap)
             iconTex=iconTex, iconCoords=iconCoords, isKill=isKill,
             spells=spells, barFrac=barFrac, bgStats=bgStats })
     end
-    local function AddSpellStrip(spells)
-        table.insert(lines, { lineType="spellstrip", spells=spells })
-    end
     local function AddText(text, r, g, b)
         table.insert(lines, { lineType="text", text=text, r=r or 1, g=g or 1, b=b or 1 })
     end
@@ -810,6 +847,7 @@ local function BuildRecapLines(recap)
             table.insert(spellList, {
                 icon         = GetSpellIcon(sName),
                 name         = sName,
+                sourceTitle  = TOTEM_SPELL_SOURCE[sName],
                 dmgText      = tostring(sg.total),
                 dmgAmt       = sg.total,
                 school       = sg.school,
@@ -1132,6 +1170,7 @@ local function WireBarHighlight(bFills, bFrames, slots, n, spells, wfFills)
     for hi = 1, n do
         local myIdx   = hi   -- new local per iteration; for-var is shared in Lua 5.0
         local sp      = spells[hi]
+        local ttTitle  = sp.sourceTitle or sp.name
         local ttName   = sp.name
         local ttSchool = sp.school
         local ttDmg    = sp.dmgText
@@ -1161,8 +1200,8 @@ local function WireBarHighlight(bFills, bFrames, slots, n, spells, wfFills)
             doHighlight()
             GameTooltip:SetOwner(owner, anchor)
             GameTooltip:ClearLines()
-            -- Name
-            GameTooltip:AddLine(ttName, 1, 1, 1)
+            -- Title (totem name if applicable, else spell name)
+            GameTooltip:AddLine(ttTitle, 1, 1, 1)
             -- School line (colored)
             local sc2 = SCHOOL_TEXT_COLORS[ttSchool] or SCHOOL_TEXT_COLORS["Physical"]
             GameTooltip:AddLine(ttSchool .. " damage", sc2[1], sc2[2], sc2[3])
@@ -1617,7 +1656,6 @@ function TBGH:ShowRecapFrame()
         elseif lt == "attacker"   then totalH = totalH + C.ATTK_H
         elseif lt == "attackerbar" then totalH = totalH + C.ATTKBAR_H
         elseif lt == "atkbar"     then totalH = totalH + C.ATKBAR_H
-        elseif lt == "spellstrip" then totalH = totalH + C.STRIP_H
         else                           totalH = totalH + C.LINE_H end
     end
     recapContent:SetHeight(math.max(totalH, 1))
@@ -1655,7 +1693,6 @@ function TBGH:ShowRecapFrame()
         elseif lt == "attacker"    then rowH = C.ATTK_H
         elseif lt == "attackerbar" then rowH = C.ATTKBAR_H
         elseif lt == "atkbar"      then rowH = C.ATKBAR_H
-        elseif lt == "spellstrip"  then rowH = C.STRIP_H
         else                            rowH = C.LINE_H end
 
         row:SetHeight(rowH)
@@ -1864,7 +1901,6 @@ function TBGH:ShowRecapFrame()
                 local iconBotBase = math.floor((rowH - iconSz) / 2)
                 local segH    = sp.isCrit and iconSz or math.floor(iconSz * 2 / 3)
                 local iconBot = iconBotBase
-                local slotW = isOther and 0 or iconSz
                 -- Split fill: main portion + optional brighter same-school portion at right end
                 local wfSubW = 0
                 local wfFill = row.wfFills[fi]
@@ -1910,12 +1946,15 @@ function TBGH:ShowRecapFrame()
                 bfr:EnableMouse(true)
                 bfr:Show()
                 -- Slot frame (icon overlaid at left of segment; zero-width for Other)
+                -- If the segment is too narrow to fit the icon, suppress it to avoid overlap
+                local iconFits = (not isOther) and (segW >= iconSz)
+                local slotW = iconFits and iconSz or 0
                 local slot = row.slots[fi]
                 slot:ClearAllPoints()
                 slot:SetPoint("TOPLEFT", row, "TOPLEFT", xCursor, 0)
                 slot:SetWidth(math.max(slotW, 1))
                 slot:SetHeight(rowH)
-                if isOther then
+                if isOther or not iconFits then
                     slot.icon:Hide()
                 elseif sp.icon then
                     slot.icon:SetTexture(sp.icon)
@@ -1924,7 +1963,7 @@ function TBGH:ShowRecapFrame()
                     slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
                     slot.icon:SetTexCoord(0, 1, 0, 1)
                 end
-                if not isOther then
+                if iconFits then
                     slot.icon:SetWidth(iconSz)
                     slot.icon:SetHeight(iconSz)
                     slot.icon:Show()
@@ -2002,53 +2041,6 @@ function TBGH:ShowRecapFrame()
                 bf:SetVertexColor(sc[1], sc[2], sc[3])
                 bf:Show()
                 xCursor = xCursor + segW + GAP
-            end
-
-        elseif lt == "spellstrip" then
-            local spells = ln.spells or {}
-            for si = 1, C.STRIP_SLOTS do
-                local slot = row.slots[si]
-                local sp   = spells[si]
-                if sp then
-                    if sp.icon then
-                        slot.icon:SetTexture(sp.icon)
-                        slot.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
-                    else
-                        slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-                        slot.icon:SetTexCoord(0, 1, 0, 1)
-                    end
-                    slot.icon:Show()
-                    local sc = SCHOOL_TEXT_COLORS[sp.school] or SCHOOL_TEXT_COLORS["Physical"]
-                    local dr, dg, db = sc[1], sc[2], sc[3]
-                    slot.dmg:SetText(sp.dmgText)
-                    slot.dmg:SetTextColor(dr, dg, db)
-                    slot.dmg:Show()
-                    -- Per-slot tooltip
-                    local ttName   = sp.name
-                    local ttSchool = sp.school
-                    local ttDmg    = sp.dmgText
-                    local ttCount  = sp.hitCount
-                    local ttCrit   = sp.isCrit
-                    slot:EnableMouse(true)
-                    slot:SetScript("OnEnter", function()
-                        GameTooltip:SetOwner(slot, "ANCHOR_TOPRIGHT")
-                        GameTooltip:ClearLines()
-                        GameTooltip:AddLine(ttName, 1, 1, 1)
-                        local sc2 = SCHOOL_TEXT_COLORS[ttSchool] or SCHOOL_TEXT_COLORS["Physical"]
-                        GameTooltip:AddLine(ttSchool .. " damage", sc2[1], sc2[2], sc2[3])
-                        GameTooltip:AddLine("Total:  " .. ttDmg, 0.9, 0.9, 0.9)
-                        if ttCount > 1 then
-                            local avg = math.floor((tonumber(ttDmg) or 0) / ttCount)
-                            GameTooltip:AddLine(ttCount .. " hits   avg " .. avg, 0.65, 0.65, 0.65)
-                        end
-                        if ttCrit then
-                            GameTooltip:AddLine("Includes critical strikes", 1, 0.82, 0)
-                        end
-                        GameTooltip:Show()
-                    end)
-                    slot:SetScript("OnLeave", function() GameTooltip:Hide() end)
-                    slot:Show()
-                end
             end
 
         else  -- "header" / "text" / "ccsummary"
@@ -2344,15 +2336,42 @@ function TBGH:ShowRecapExportFrame()
     -- Build text from log ring buffer
     local log   = self.recapLog
     local parts = {}
+
+    -- Header: snapshot of current attribution state
+    local bgType = TBGH_GetBGType() or "nil"
+    table.insert(parts, "=== TurtlePvPEnhanced v" .. (GetAddOnMetadata("TurtlePvPEnhanced", "Version") or "?") .. " Debug Log ===")
+    table.insert(parts, "Zone: " .. (GetRealZoneText() or "?") .. "  |  BG type: " .. bgType)
+    -- bgScoreCache
+    local scoreCount = 0
+    local scoreNames = {}
+    for name in pairs(self.bgScoreCache or {}) do
+        scoreCount = scoreCount + 1
+        table.insert(scoreNames, name)
+    end
+    table.insert(parts, "bgScoreCache (" .. scoreCount .. "): " .. table.concat(scoreNames, ", "))
+    -- petCache
+    local petCount = 0
+    local petLines = {}
+    for petName, ownerName in pairs(TBGH.petCache or {}) do
+        petCount = petCount + 1
+        table.insert(petLines, petName .. "->" .. ownerName)
+    end
+    table.insert(parts, "petCache (" .. petCount .. "): " .. (petCount > 0 and table.concat(petLines, ", ") or "empty"))
+    -- classCache count
+    local classCount = 0
+    for _ in pairs(self.classCache or {}) do classCount = classCount + 1 end
+    table.insert(parts, "classCache entries: " .. classCount)
+    table.insert(parts, "---")
+
     for i = 1, table.getn(log) do
-        parts[i] = log[i]
+        table.insert(parts, log[i])
     end
     local text = ""
     for i = 1, table.getn(parts) do
         text = text .. parts[i] .. "\n"
     end
-    if text == "" then
-        text = "(no log entries yet — enable recapdebug or take some damage first)"
+    if table.getn(log) == 0 then
+        text = text .. "(no log entries yet — enable recapdebug or take some damage first)"
     end
     recapExportFrame._eb:SetText(text)
     recapExportFrame:Show()

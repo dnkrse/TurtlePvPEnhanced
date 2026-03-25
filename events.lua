@@ -70,17 +70,17 @@ frame:SetScript("OnEvent", function()
         local db = TBGH.db
         local msg = arg1
         if db.wsgAutoAnnounce ~= false and db.wsgDedup ~= false and msg and string.find(msg, "EFC") then
-            if string.find(msg, "EFC LOW") then
-                local _, _, pctStr = string.find(msg, "(%d+)%%")
-                local pct = pctStr and tonumber(pctStr)
-                if pct then
-                    local thresh = nil
-                    if pct <= 20 then thresh = 20
-                    elseif pct <= 40 then thresh = 40
-                    end
-                    if thresh then
-                        TBGH.wsg.efcAnnounceSeenAt[thresh] = GetTime()
-                    end
+            -- Match "EFC <color>75%|r: <name>" — our threshold announcement format
+            local _, _, pctStr = string.find(msg, "EFC [^\n]*(%d+)%%")
+            local pct = pctStr and tonumber(pctStr)
+            if pct then
+                local thresh = nil
+                if pct <= 25 then thresh = 25
+                elseif pct <= 50 then thresh = 50
+                elseif pct <= 75 then thresh = 75
+                end
+                if thresh then
+                    TBGH.wsg.efcAnnounceSeenAt[thresh] = GetTime()
                 end
             elseif string.find(msg, "^EFC:") then
                 TBGH.wsg.efcManualSeenAt = GetTime()

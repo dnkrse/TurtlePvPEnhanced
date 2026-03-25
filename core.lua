@@ -576,6 +576,7 @@ end)
 ---------------------------------------------------------------------
 TBGH.classCache    = {}
 TBGH.bgScoreCache  = {}  -- name -> { kbs, deaths, hks }
+TBGH.petCache      = {}  -- petName -> ownerName
 
 -- Proactively cache classes for every unit ID currently accessible.
 -- Call this whenever we know enemies are nearby (e.g. on each UNIT_COMBAT).
@@ -594,11 +595,21 @@ function TBGH:ScanClassesNow()
     for r = 1, numRaid do
         tryUnit("raid" .. r)
         tryUnit("raid" .. r .. "target")
+        local petName = UnitName("raidpet" .. r)
+        local ownName = UnitName("raid" .. r)
+        if petName and petName ~= "Unknown" and ownName and ownName ~= "Unknown" then
+            self.petCache[petName] = ownName
+        end
     end
     local numParty = GetNumPartyMembers()
     for p = 1, numParty do
         tryUnit("party" .. p)
         tryUnit("party" .. p .. "target")
+        local petName = UnitName("partypet" .. p)
+        local ownName = UnitName("party" .. p)
+        if petName and petName ~= "Unknown" and ownName and ownName ~= "Unknown" then
+            self.petCache[petName] = ownName
+        end
     end
 end
 

@@ -590,6 +590,10 @@ SlashCmdList["TPVP"] = function(msg)
         -- Stormrage (Druid): Nature + Arcane (overkill)
         local e6a = { time=t-1.3, amount=220, overkill=0,  school="Nature",   hitType="hit",   attacker="Stormrage",class="DRUID",   spell="Wrath",           enriched=true, isCC=false }
         local e6b = { time=t-0.8, amount=305, overkill=180,school="Arcane",   hitType="crit",  attacker="Stormrage",class="DRUID",   spell="Starfire",        enriched=true, isCC=false }
+        -- Zapthorn (Shaman): Fire (Searing Totem) + Nature — totem icon preview
+        local e7a = { time=t-4.2, amount=88,  overkill=0,  school="Fire",     hitType="hit",   attacker="Zapthorn",  class="SHAMAN",  spell="Searing Bolt",    enriched=true, isCC=false }
+        local e7b = { time=t-3.9, amount=74,  overkill=0,  school="Fire",     hitType="hit",   attacker="Zapthorn",  class="SHAMAN",  spell="Searing Bolt",    enriched=true, isCC=false }
+        local e7c = { time=t-3.6, amount=102, overkill=0,  school="Nature",   hitType="crit",  attacker="Zapthorn",  class="SHAMAN",  spell="Lightning Bolt",  enriched=true, isCC=false }
 
         local eCC = { time=t-3.5, isCC=true, ccName="Cheap Shot", ccEnd=t-3.5+3.2, attacker="Sneakius" }
 
@@ -599,6 +603,7 @@ SlashCmdList["TPVP"] = function(msg)
         local grpG  = { total = e4a.amount+e4b.amount,            hits = {e4a,e4b}     }
         local grpV  = { total = e5a.amount+e5b.amount,            hits = {e5a,e5b}     }
         local grpD  = { total = e6a.amount+e6b.amount,            hits = {e6a,e6b}     }
+        local grpZ  = { total = e7a.amount+e7b.amount+e7c.amount, hits = {e7a,e7b,e7c} }
 
         -- Seed mock BG scores so the stat line is visible in the preview
         TBGH.bgScoreCache = TBGH.bgScoreCache or {}
@@ -608,15 +613,18 @@ SlashCmdList["TPVP"] = function(msg)
         TBGH.bgScoreCache["Grimtusk"]  = { kbs=1, deaths=2, hks=8,  rank=3,  faction=1 }
         TBGH.bgScoreCache["Vexara"]    = { kbs=0, deaths=4, hks=5,  rank=1,  faction=0 }
         TBGH.bgScoreCache["Stormrage"] = { kbs=3, deaths=1, hks=14, rank=7,  faction=0 }
+        TBGH.bgScoreCache["Zapthorn"]  = { kbs=1, deaths=2, hks=7,  rank=4,  faction=1 }
 
         TBGH.lastRecap = {
-            snapshot       = {e1a,e1b,e1c,e2a,e2b,e2c,eCC,e3a,e3b,e3c,e4a,e4b,e5a,e5b,e6a,e6b},
-            attackerOrder  = {"Brutahk","Frostina","Sneakius","Grimtusk","Vexara","Stormrage"},
+            snapshot       = {e1a,e1b,e1c,e2a,e2b,e2c,eCC,e3a,e3b,e3c,e4a,e4b,e5a,e5b,e6a,e6b,e7a,e7b,e7c},
+            attackerOrder  = {"Brutahk","Frostina","Sneakius","Grimtusk","Vexara","Stormrage","Zapthorn"},
             attackerGroups = { ["Brutahk"]=grpB, ["Frostina"]=grpF, ["Sneakius"]=grpS,
-                               ["Grimtusk"]=grpG, ["Vexara"]=grpV, ["Stormrage"]=grpD },
+                               ["Grimtusk"]=grpG, ["Vexara"]=grpV, ["Stormrage"]=grpD,
+                               ["Zapthorn"]=grpZ },
             attackerClass  = { ["Brutahk"]="PALADIN", ["Frostina"]="MAGE", ["Sneakius"]="WARLOCK",
-                               ["Grimtusk"]="HUNTER", ["Vexara"]="PRIEST", ["Stormrage"]="DRUID" },
-            totalDamage    = grpB.total+grpF.total+grpS.total+grpG.total+grpV.total+grpD.total,
+                               ["Grimtusk"]="HUNTER", ["Vexara"]="PRIEST", ["Stormrage"]="DRUID",
+                               ["Zapthorn"]="SHAMAN" },
+            totalDamage    = grpB.total+grpF.total+grpS.total+grpG.total+grpV.total+grpD.total+grpZ.total,
             overkill       = 180,
             killingEntry   = e6b,
             maxHP          = UnitHealthMax("player") or 3500,
