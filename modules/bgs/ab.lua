@@ -908,6 +908,9 @@ TBGH:RegisterModule({
 
         f:SetHeight(62)
 
+        TBGH.AddTooltip(check, "Enable Arathi Basin Score Display",
+            "Shows a live resource score overlay while you are fighting in Arathi Basin.")
+
         check:SetScript("OnClick", function()
             TBGH.db.abEnabled = this:GetChecked() and true or false
         end)

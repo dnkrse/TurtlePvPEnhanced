@@ -5,11 +5,12 @@
 -- BG zone detection
 ---------------------------------------------------------------------
 local BG_ZONES = {
-    ["Arathi Basin"] = "ab",
-    ["Warsong Gulch"] = "wsg",
-    ["Alterac Valley"] = "av",
+    ["Arathi Basin"]      = "ab",
+    ["Warsong Gulch"]     = "wsg",
+    ["Alterac Valley"]    = "av",
     ["Sunnyglade Valley"] = "sgv",
-    ["Thorn Gorge"] = "tg",
+    ["Thorn Gorge"]       = "tg",
+    ["Blood Ring"]        = "br",
 }
 
 function TBGH_GetBGType()
@@ -434,7 +435,22 @@ function TBGH.CreateSectionFrame(parent, prevFrame, title, icon)
     return f
 end
 
--- AddPositionControls: adds "Position" label + Move + Reset buttons to a section frame.
+-- AddTooltip: attach a beginner-friendly hover tooltip to any frame.
+-- title : short header line (gold, matching settings UI)
+-- body  : explanatory sentence (light grey, word-wrapped)
+function TBGH.AddTooltip(frame, title, body)
+    frame:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        GameTooltip:SetText(title, 1, 0.82, 0)
+        if body then
+            GameTooltip:AddLine(body, 0.8, 0.8, 0.8, true)
+        end
+        GameTooltip:Show()
+    end)
+    frame:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+end
 -- sectionKey : string key used for TBGH.previewSection (e.g. "wsg", "ab")
 -- onReset    : function called when Reset is clicked
 -- onMove     : function called when Move is clicked (toggle preview)

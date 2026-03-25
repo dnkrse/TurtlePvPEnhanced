@@ -4,7 +4,7 @@
 ## Author: Citrin (Tel'Abim - TurtleWoW)
 ## SavedVariables: TurtlePvPDB
 ## X-Category: Battlegrounds/PvP
-## Version: 1.1
+## Version: 1.1.1
 core.lua
 modules\bgs\ab.lua
 modules\bgs\wsg.lua
@@ -13,6 +13,7 @@ modules\bgs\tg.lua
 modules\bgs\br.lua
 data\database_icons.lua
 modules\deathrecap.lua
+modules\communication.lua
 events.lua
 minimap.lua
 settings.lua

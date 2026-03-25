@@ -1442,9 +1442,34 @@ local function UpdateRecapTabs(recap)
     local physPct = math.floor(physTotal / total * 100 + 0.5)
     local magPct  = math.floor(magTotal  / total * 100 + 0.5)
 
+    -- Dynamic label colors: vivid at 100%, dimmed at 0%
+    -- Physical: orange ff8010 → 886030
+    -- Magic:    blue   3399ff → 2255aa
+    local pf = physPct / 100
+    local mf = magPct  / 100
+    local physLabelR = math.floor((255 * pf + 136 * (1-pf)) + 0.5)
+    local physLabelG = math.floor((128 * pf +  96 * (1-pf)) + 0.5)
+    local physLabelB = math.floor(( 16 * pf +  48 * (1-pf)) + 0.5)
+    local magLabelR  = math.floor(( 51 * mf +  34 * (1-mf)) + 0.5)
+    local magLabelG  = math.floor((153 * mf +  85 * (1-mf)) + 0.5)
+    local magLabelB  = math.floor((255 * mf + 170 * (1-mf)) + 0.5)
+    local physValR   = math.floor((255 * pf + 153 * (1-pf)) + 0.5)
+    local physValG   = math.floor((170 * pf + 119 * (1-pf)) + 0.5)
+    local physValB   = math.floor(( 34 * pf +  68 * (1-pf)) + 0.5)
+    local magValR    = math.floor((102 * mf +  51 * (1-mf)) + 0.5)
+    local magValG    = math.floor((204 * mf + 119 * (1-mf)) + 0.5)
+    local magValB    = math.floor((255 * mf + 204 * (1-mf)) + 0.5)
+
+    local function hex(r, g, b)
+        return string.format("%02x%02x%02x", r, g, b)
+    end
+
     -- Three tabs: Phys+Magic left, CC right
     -- Physical tab
-    physTab.label:SetText("|cffd4722aPhysical|r |cffffaa22" .. physTotal .. "|r |cff888888(" .. physPct .. "%)|r")
+    physTab.label:SetText(
+        "|cff"..hex(physLabelR,physLabelG,physLabelB).."Physical|r"
+        .." |cff"..hex(physValR,physValG,physValB)..physTotal.."|r"
+        .." |cff888888("..physPct.."%)|r")
     physTab:SetWidth(150)
     physTab:ClearAllPoints()
     physTab:SetPoint("TOPLEFT", recapFrame, "BOTTOMLEFT", 22, 6)
@@ -1470,7 +1495,10 @@ local function UpdateRecapTabs(recap)
     physTab:Show()
 
     -- Magic tab
-    magTab.label:SetText("|cff5588ccMagic|r |cff44ccff" .. magTotal .. "|r |cff888888(" .. magPct .. "%)|r")
+    magTab.label:SetText(
+        "|cff"..hex(magLabelR,magLabelG,magLabelB).."Magic|r"
+        .." |cff"..hex(magValR,magValG,magValB)..magTotal.."|r"
+        .." |cff888888("..magPct.."%)|r")
     magTab:SetWidth(150)
     magTab:ClearAllPoints()
     magTab:SetPoint("TOPLEFT", physTab, "TOPRIGHT", -4, 0)
@@ -1514,9 +1542,9 @@ local function UpdateRecapTabs(recap)
         elseif rootTotal > 0 then
             ccStr = string.format("root %.1fs", rootTotal)
         elseif hasTtLines then
-            ccStr = "CC x" .. table.getn(ttLines)
+            ccStr = "x" .. table.getn(ttLines)
         else
-            ccStr = "CC"
+            ccStr = ""
         end
         stunTab.label:ClearAllPoints()
         stunTab.label:SetPoint("CENTER", stunTab, "CENTER", 9, 2)
@@ -1763,7 +1791,8 @@ function TBGH:ShowRecapFrame()
             -- Rank icon: bottom-left corner of the class icon
             local RANK_SZ = 14
             if bs and bs.rank and bs.rank > 0 then
-                local rankNum = string.format("%02d", bs.rank)
+                local _, rankTex = GetPVPRankInfo(bs.rank)
+                local rankNum = string.format("%02d", rankTex or bs.rank)
                 row.rankIcon:SetTexture("Interface\\PvPRankBadges\\PvPRank" .. rankNum)
                 row.rankIcon:ClearAllPoints()
                 row.rankIcon:SetPoint("CENTER", row.icon, "BOTTOMRIGHT", 0, 0)
@@ -1825,7 +1854,10 @@ function TBGH:ShowRecapFrame()
                 local nextPx = math.floor(fillW * cumDmg / totalDmg)
                 -- Enforce a minimum so the bar colour is visible beyond the icon overlay
                 local minSeg = isOther and 16 or (iconSz + 16)
-                local segW = math.max(nextPx - prevPx, minSeg)
+                -- Clamp against remaining bar space so fills never overrun into the dmg label
+                local gapAfter = (fi < nSpells) and GAP or 0
+                local remaining = math.max((C.ATTKBAR_BX + barW) - xCursor - gapAfter, 1)
+                local segW = math.min(math.max(nextPx - prevPx, minSeg), remaining)
                 local cr, cg, cb = sc[1], sc[2], sc[3]
                 fillBaseR[fi], fillBaseG[fi], fillBaseB[fi] = cr, cg, cb
                 -- Bar fill spans the full segment width; icon overlays the left portion
@@ -2363,6 +2395,11 @@ TBGH:RegisterModule({
                 expandLabel:SetTextColor(0.5, 0.5, 0.5)
             end
         end
+
+        TBGH.AddTooltip(enableCheck, "Enable Death Recap",
+            "After you die, shows a breakdown of which enemies dealt damage to you, with spell-by-spell detail.")
+        TBGH.AddTooltip(expandCheck, "Always Expand on Death",
+            "Opens the death recap panel automatically every time you die, without needing to click a button.")
 
         enableCheck:SetScript("OnClick", function()
             local checked = this:GetChecked() and true or false

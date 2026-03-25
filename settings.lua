@@ -32,6 +32,12 @@ settingsTitle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 12, -10)
 settingsTitle:SetTextColor(1, 0.82, 0, 1)
 settingsTitle:SetText("TurtlePvPEnhanced")
 
+local settingsVersion = settingsFrame:CreateFontString(nil, "OVERLAY")
+settingsVersion:SetFont("Fonts\\FRIZQT__.TTF", 9)
+settingsVersion:SetPoint("LEFT", settingsTitle, "RIGHT", 6, 0)
+settingsVersion:SetTextColor(0.45, 0.45, 0.45, 1)
+settingsVersion:SetText("v" .. (GetAddOnMetadata("TurtlePvPEnhanced", "Version") or "?"))
+
 -- Title separator
 local titleSep = settingsFrame:CreateTexture(nil, "ARTWORK")
 titleSep:SetHeight(1)
@@ -148,7 +154,7 @@ local function MakeThinScrollbar(wrapper, sf, child, vH)
     return UpdateThumb
 end
 
--- View height: settingsFrame(400) - header(30) - tabs(46) = 324
+-- View height: settingsFrame(400) - header(30) - bottom(46) = 324
 local SCROLL_VIEW_H = settingsFrame:GetHeight() - 76
 
 -- BG tab: wrapper → scroll frame → scroll child (bgTabContent)
@@ -161,7 +167,7 @@ bgScrollFrame:SetPoint("TOPLEFT", bgWrapper, "TOPLEFT", 0, 0)
 bgScrollFrame:SetPoint("BOTTOMRIGHT", bgWrapper, "BOTTOMRIGHT", -12, 0)
 
 local bgTabContent = CreateFrame("Frame", nil, bgScrollFrame)
-bgTabContent:SetWidth(300)
+bgTabContent:SetWidth(310)
 bgTabContent:SetHeight(374)  -- 8 + 62+6 + 118+6 + 54+6 + 54+6 + 54 = exact BG content height
 bgScrollFrame:SetScrollChild(bgTabContent)
 
@@ -176,8 +182,8 @@ combatScrollFrame:SetPoint("TOPLEFT", combatWrapper, "TOPLEFT", 0, 0)
 combatScrollFrame:SetPoint("BOTTOMRIGHT", combatWrapper, "BOTTOMRIGHT", -12, 0)
 
 local combatTabContent = CreateFrame("Frame", nil, combatScrollFrame)
-combatTabContent:SetWidth(300)
-combatTabContent:SetHeight(294)  -- 8 + 80+6 + 114+6 + 80 = exact combat content height
+combatTabContent:SetWidth(310)
+combatTabContent:SetHeight(354)  -- 8 + 80+6 + 114+6 + 80+6 + 54 = combat content height
 combatScrollFrame:SetScrollChild(combatTabContent)
 
 local bgUpdateThumb     = MakeThinScrollbar(bgWrapper,     bgScrollFrame,     bgTabContent,     SCROLL_VIEW_H)
@@ -239,26 +245,40 @@ local function UpdateScrollMetrics()
     combatUpdateThumb()
 end
 
+-- tabCombat x = 10 (tabBG offsetX) + 110 (tabBG width) - 2 (overlap) = 118
+local TAB_BG_X     = 10
+local TAB_COMBAT_X = 118
+local TAB_Y_ACTIVE   = 4   -- active tab rises to visually connect to the frame
+local TAB_Y_INACTIVE = 4
+
 local function UpdateSettingsTabs()
     if activeTab == "bg" then
         bgWrapper:Show()
         combatWrapper:Hide()
         TurtlePvPTabBG:SetActive(true)
         TurtlePvPTabCombat:SetActive(false)
+        TurtlePvPTabBG:ClearAllPoints()
+        TurtlePvPTabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_BG_X, TAB_Y_ACTIVE)
+        TurtlePvPTabCombat:ClearAllPoints()
+        TurtlePvPTabCombat:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_COMBAT_X, TAB_Y_INACTIVE)
     else
         bgWrapper:Hide()
         combatWrapper:Show()
         TurtlePvPTabBG:SetActive(false)
         TurtlePvPTabCombat:SetActive(true)
+        TurtlePvPTabBG:ClearAllPoints()
+        TurtlePvPTabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_BG_X, TAB_Y_INACTIVE)
+        TurtlePvPTabCombat:ClearAllPoints()
+        TurtlePvPTabCombat:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_COMBAT_X, TAB_Y_ACTIVE)
     end
 end
 
--- Tab buttons
+-- Tab buttons (initial positions set by UpdateSettingsTabs on first call)
 local tabBG = MakeSettingsTab("TurtlePvPTabBG", "Battlegrounds", 110)
-tabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", 10, 0)
+tabBG:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_BG_X, TAB_Y_ACTIVE)
 
 local tabCombat = MakeSettingsTab("TurtlePvPTabCombat", "Utilities", 90)
-tabCombat:SetPoint("LEFT", tabBG, "RIGHT", -2, 0)
+tabCombat:SetPoint("TOPLEFT", settingsFrame, "BOTTOMLEFT", TAB_COMBAT_X, TAB_Y_INACTIVE)
 
 tabBG:SetScript("OnClick", function()
     activeTab = "bg"
@@ -270,9 +290,6 @@ tabCombat:SetScript("OnClick", function()
     UpdateSettingsTabs()
     HideAllPreviews()
 end)
-
-tabBG:SetActive(true)
-tabCombat:SetActive(false)
 
 ---------------------------------------------------------------------
 -- BATTLEGROUNDS TAB — Build module settings dynamically
@@ -353,6 +370,9 @@ local totemSkipLabel = combatFrame:CreateFontString(nil, "OVERLAY", "GameFontNor
 totemSkipLabel:SetPoint("LEFT", totemSkipCheck, "RIGHT", 2, 0)
 totemSkipLabel:SetText("Skip totems when Tab-targeting")
 
+TBGH.AddTooltip(totemSkipCheck, "Skip Totems When Tab-Targeting",
+    "Prevents Tab from selecting enemy Shaman totems, so you cycle through players instead.")
+
 totemSkipCheck:SetScript("OnClick", function()
     TBGH.db.totemSkip = this:GetChecked() and true or false
 end)
@@ -364,6 +384,9 @@ autoReleaseCheck:SetPoint("TOPLEFT", totemSkipCheck, "BOTTOMLEFT", 0, 2)
 local autoReleaseLabel = combatFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 autoReleaseLabel:SetPoint("LEFT", autoReleaseCheck, "RIGHT", 2, 0)
 autoReleaseLabel:SetText("Auto-release spirit on death (BGs only)")
+
+TBGH.AddTooltip(autoReleaseCheck, "Auto-Release Spirit in Battlegrounds",
+    "Automatically clicks Release Spirit when you die inside a BG, so you respawn faster without pressing a key.")
 
 autoReleaseCheck:SetScript("OnClick", function()
     TBGH.db.autoRelease = this:GetChecked() and true or false
@@ -384,6 +407,9 @@ local helmCheckLabel = gadgetFrame:CreateFontString(nil, "OVERLAY", "GameFontNor
 helmCheckLabel:SetPoint("LEFT", helmCheck, "RIGHT", 2, 0)
 helmCheckLabel:SetText("Auto-hide helmet on equip")
 
+TBGH.AddTooltip(helmCheck, "Auto-Hide Helmet on Equip",
+    "Hides your helmet visually when certain items (like Engineering goggles) are equipped. Tick the items below you want this applied to.")
+
 local helmItemChecks = {}
 local helmItemLabels = {}
 for i = 1, table.getn(TBGH.HELM_AUTO_HIDE_ITEMS) do
@@ -395,6 +421,7 @@ for i = 1, table.getn(TBGH.HELM_AUTO_HIDE_ITEMS) do
     lbl:SetPoint("LEFT", cb, "RIGHT", 2, 0)
     lbl:SetText(entry.name)
     cb._helmId = entry.id
+    TBGH.AddTooltip(cb, entry.name, "Hide your helmet automatically whenever this item is equipped.")
     cb:SetScript("OnClick", function()
         local db = TBGH.db
         if not db.helmAutoHideItems then db.helmAutoHideItems = {} end

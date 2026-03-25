@@ -29,6 +29,9 @@ A PvP utility addon for **Turtle WoW** (Patch 1.18.1+).
 - Auto-release on death in battlegrounds
 - Auto-queue for battlegrounds on login
 
+**Communication**
+- Automatically switches chat to `/bg` when you open the chat box inside a battleground
+
 **Gadgets**
 - Auto-hide helmet slot when equipping trinket helmets
 - Tab-target skips Shaman totems

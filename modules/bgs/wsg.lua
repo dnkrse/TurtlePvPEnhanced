@@ -73,7 +73,7 @@ wsgAlliFrame:SetScript("OnClick", function()
         if pct then
             local cc = TBGH:GetClassColorByName(name)
             local cOpen = cc and ("|c" .. cc) or "|cffffd100"
-            SendChatMessage("EFC: " .. cOpen .. name .. "|r - " .. pct .. "% Health", "BATTLEGROUND")
+            SendChatMessage("EFC " .. cOpen .. name .. "|r - " .. pct .. "% Health", "BATTLEGROUND")
         end
     end
 end)
@@ -166,7 +166,7 @@ wsgHordeFrame:SetScript("OnClick", function()
         if pct then
             local cc = TBGH:GetClassColorByName(name)
             local cOpen = cc and ("|c" .. cc) or "|cffffd100"
-            SendChatMessage("EFC: " .. cOpen .. name .. "|r - " .. pct .. "% Health", "BATTLEGROUND")
+            SendChatMessage("EFC " .. cOpen .. name .. "|r - " .. pct .. "% Health", "BATTLEGROUND")
         end
     end
 end)
@@ -694,6 +694,9 @@ TBGH:RegisterModule({
         checkLabel:SetPoint("LEFT", check, "RIGHT", 2, 0)
         checkLabel:SetText("Enable flag carrier display")
 
+        TBGH.AddTooltip(check, "Enable Flag Carrier Display",
+            "Shows who is carrying each flag in Warsong Gulch, along with their HP and distance to base.")
+
         local checkHint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         checkHint:SetPoint("TOPLEFT", check, "BOTTOMLEFT", 4, 2)
         checkHint:SetTextColor(0.45, 0.45, 0.45, 1)
@@ -727,6 +730,9 @@ TBGH:RegisterModule({
         autoCheckLabel:SetPoint("LEFT", autoCheck, "RIGHT", 2, 0)
         autoCheckLabel:SetText("Auto-announce EFC low HP (75%/50%/25%)")
 
+        TBGH.AddTooltip(autoCheck, "Auto-Announce Enemy FC Low HP",
+            "Sends a /bg message when the enemy flag carrier drops to 75%, 50%, or 25% health to alert your team.")
+
         -- Dedup sub-checkbox
         local dedupCheck = CreateFrame("CheckButton", "TurtlePvPWSGDedupCheck", f, "UICheckButtonTemplate")
         dedupCheck:SetWidth(24)
@@ -735,6 +741,9 @@ TBGH:RegisterModule({
         local dedupCheckLabel = f:CreateFontString("TurtlePvPWSGDedupCheckLabel", "OVERLAY", "GameFontNormalSmall")
         dedupCheckLabel:SetPoint("LEFT", dedupCheck, "RIGHT", 2, 0)
         dedupCheckLabel:SetText("Skip if already announced by another user")
+
+        TBGH.AddTooltip(dedupCheck, "Skip Duplicate Announcements",
+            "Avoids sending a low HP alert if another TurtlePvPEnhanced user in your raid has already announced it.")
 
         f:SetHeight(118)
 
